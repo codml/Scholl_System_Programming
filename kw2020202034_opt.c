@@ -15,10 +15,10 @@ int main (int argc, char **argv)
         switch (c)
         {
         case 'a':
-            aflag = 1;
+            aflag++;
             break;
         case 'b':
-            bflag = 1;
+            bflag++;
             break;
         case 'c':
             cvalue = optarg;
