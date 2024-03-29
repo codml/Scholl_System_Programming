@@ -9,8 +9,6 @@ int main (int argc, char **argv)
     int index, c;
     opterr = 0;
 
-    index = 1;
-
     while ((c = getopt(argc, argv, "abc:")) != -1)
     {
         switch (c)
@@ -25,15 +23,10 @@ int main (int argc, char **argv)
             cvalue = optarg;
             break;
         }
-        index++;
     }
     printf("aflag= %d, bflag= %d, cvalue= %s\n", aflag, bflag, cvalue);
-    
-    for (int i = index; i < argc; i++)
-    {
-        if (strcmp(argv[i], cvalue))
-            printf("Non-option argument %s\n", argv[i]);
-
-    }
+ 
+    for (index = optind; index < argc; index++)
+        printf("Non-option argument %s\n", argv[index]);
     return 0;
 }
