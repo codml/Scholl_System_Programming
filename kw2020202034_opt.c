@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 
 int main (int argc, char **argv)
 {
@@ -29,7 +30,10 @@ int main (int argc, char **argv)
     printf("aflag= %d, bflag= %d, cvalue= %s\n", aflag, bflag, cvalue);
     
     for (int i = index; i < argc; i++)
-        printf("Non-option argument %s\n", argv[i]);
+    {
+        if (strcmp(argv[i], cvalue))
+            printf("Non-option argument %s\n", argv[i]);
 
+    }
     return 0;
 }
