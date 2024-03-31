@@ -37,7 +37,7 @@ int main (int argc, char **argv)
             break;
         }
     }
-    printf("aflag= %d, bflag= %d, cvalue= %s\n", aflag, bflag, cvalue);
+    printf("aflag = %d, bflag = %d, cvalue = %s\n", aflag, bflag, cvalue);
  
     ////////////////////print non-option arguments///////////////////
     for (index = optind; index < argc; index++) // start from optind to argc - 1
