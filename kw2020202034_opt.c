@@ -14,6 +14,15 @@
 #include <stdio.h>
 #include <string.h>
 
+////////////////////////////////////////////////////////////////////
+// main                                                           //
+// ============================================================== //
+// Input: int -> number of arguments                              //
+//          char ** -> array of argument                          //
+// Output : int -> always 0                                       //
+// Purpose: main function                                         //
+////////////////////////////////////////////////////////////////////
+
 int main (int argc, char **argv)
 {
     int aflag= 0, bflag= 0;
