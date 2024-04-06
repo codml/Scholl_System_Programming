@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # argument number error
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <File name> <Title number> <function #>" 
+if [ "$#" -ne 4 ]; then
+    echo "Usage: $0 <File name> <#-#> <subject> <function #>" 
     exit 1
 fi
 
@@ -23,12 +23,12 @@ printf "// Author	:%-52s //\n" 'Kim Tae Wan' >> $1
 #change by your ID
 printf "// Student ID	:%-52d //\n" '2020202034' >> $1
 echo "// ------------------------------------------------------------------ //" >> $1
-printf "// Title	:System Programming Assignment #%-21s //\n" $2 >> $1
+printf "// Title	:System Programming Assignment #%s: %-17s//\n" $2 $3 >> $1
 printf "// Description	:%-52s //\n" '...' >> $1
 echo -e "////////////////////////////////////////////////////////////////////////\n\n" >> $1
 
 # function header
-for i in $(seq $3)
+for i in $(seq $4)
 do
 	echo -e "////////////////////////////////////////////////////////////////////////" >> $1
 	echo -e "// Function Name                                                      //" >> $1
