@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////
 // File Name    :kw2020202034_ls.c                                    //
-// Date         :2024/04/08                                           //
+// Date         :2024/04/09                                           //
 // OS           :Ubuntu 20.04.6 LTS 64bits                            //
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
 // ------------------------------------------------------------------ //
 // Title        :System Programming Assignment #1-2: ls               //
-// Description  :...                                                  //
+// Description  :Read file names in a directory using readdir()       //
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	{
 		if (errno == EACCES) // Permission denied
 			errorM = "Access denied";
-		else if (errno == ENOENT) // no such directory or name is empty string
+		else if (errno == ENOENT | ENOTDIR) // no such directory or name is empty string
 			errorM = "No such directory";
 		else
 			errorM = strerror(errno);
