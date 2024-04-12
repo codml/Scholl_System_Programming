@@ -54,11 +54,12 @@ void	NLST(const char *buf)
 {
 	char	*split[256];
 	int		idx = 0;
+	char	c;
 
 	for (char *ptr = strtok(buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[idx++] = ptr;
 	split[idx] = NULL;
-
+	
 	
 	exit(0);
 }
