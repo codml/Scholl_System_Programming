@@ -1,6 +1,0 @@
-ls File_name: error O
-
-ls -l File_name: error X + a option nono
-
-cli: error handling X
-srv: error handling O

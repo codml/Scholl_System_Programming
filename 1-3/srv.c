@@ -1,35 +1,37 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <time.h>
+#include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 
 #define MAX_BUF 4096
 
 void	MtoS(mode_t st_mode, char *string);
-void	NLST(char **buf, int argc);
-void	LIST(char **buf, int argc);
-void	PWD(char **buf, int argc);
-void	CWD(char **buf, int argc);
-void	CDUP(char **buf, int argc);
-void	MKD(char **buf, int argc);
-void	DELE(char **buf, int argc);
-void	RMD(char **buf, int argc);
-void	RN(char **buf, int argc);
-void	QUIT(char **buf, int argc);
-void	UNK(char **buf, int argc);
+void	NLST(char *buf);
+void	LIST(char *buf);
+void	PWD(char *buf);
+void	CWD(char *buf);
+void	CDUP(char *buf);
+void	MKD(char *buf);
+void	DELE(char *buf);
+void	RMD(char *buf);
+void	RN(char *buf);
+void	QUIT(char *buf);
+void	UNK(char *buf);
 
 struct	s_table {
 	char	*func_name;
-	void	(*fp)(char**, int);
+	void	(*fp)(char*);
 };
 
 void	main()
 {
 	char	buf[MAX_BUF];
-	int		idx = 0;
-	char	*split[256];
-	int		idx = 0;
-	char	c;
 
 	struct s_table table[11] = {
 		{"NLST", NLST},
@@ -48,14 +50,10 @@ void	main()
 	memset(buf, 0, sizeof(buf));
 	read(0, buf, sizeof(buf));
 
-	for (char *ptr = strtok(buf, " "); ptr; ptr = strtok(NULL, " "))
-		split[idx++] = ptr;
-	split[idx] = NULL;
-
 	for (int i = 0; i < 11; i++)
 	{
-		if (!strncmp(split[0], table[i].func_name, strlen(table[i].func_name)))
-			(table[i].fp)(split, idx); // each function has exit()
+		if (!strncmp(buf, table[i].func_name, strlen(table[i].func_name)))
+			(table[i].fp)(buf); // each function has exit()
 	}
 }
 
@@ -87,19 +85,32 @@ void	MtoS(mode_t st_mode, char *str)
     str[10] = '\0';
 }
 
-void	NLST(char ** buf, int argc)
+void	NLST(char *buf)
 {
 	char 			c;
+	int				idx;
 	int				aflag = 0;
 	int				lflag = 0;
+
 	char			*pathname;
+	char			*errorM;
+
 	DIR				*dp;
 	struct dirent	*dirp;
 	struct stat		infor;
+
+
+	char			*split[256];
 	char			mode[11];
+	char			time_buf[32];
+	char			print_buf[MAX_BUF];
 	opterr = 0;
 
-	while ((c = getopt(argc, buf, "al")) != -1)
+	strcpy(print_buf, buf);
+	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+		split[idx++] = ptr;
+	split[idx] = NULL;
+	while ((c = getopt(idx, split, "al")) != -1)
 	{
 		switch (c)
 		{
@@ -114,15 +125,15 @@ void	NLST(char ** buf, int argc)
 			exit(1);
 		}
 	}
-	if (optind != argc && optind != argc - 1)
+	if (optind != idx && optind != idx - 1)
 	{
 		write(2, "Error: too many arguments\n", 100);
 		exit(1);
 	}
-	if (optind == argc)
+	if (optind == idx)
 		pathname = ".";
 	else
-		pathname = buf[optind];
+		pathname = split[optind];
 	
 	if ((dp = opendir(pathname)) == NULL)
 	{
@@ -130,72 +141,83 @@ void	NLST(char ** buf, int argc)
 		{
 			if(stat(pathname, &infor) == -1)
 			{
-				// error handling for reading file
+				if (errno == EACCES)
+					errorM = "cannot access";
+				else if (errno == ENOENT)
+					errorM = "No such file or directory";
+				else
+					errorM = strerror(errno);
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", errorM);
+				write(2, print_buf, strlen(print_buf));
+				exit(1);
 			}
-			MtoS(infor.st_mode, &mode);
+			MtoS(infor.st_mode, mode);
+			strftime(time_buf, sizeof(time_buf), "%b %d %R",
+				localtime(&(infor.st_mtime)));
+			snprintf(print_buf, sizeof(print_buf),
+				"%s %2ld %s %s %6ld %s %s\n",
+				mode, infor.st_nlink, getpwuid(infor.st_uid)->pw_name,
+				getgrgid(infor.st_gid)->gr_name, infor.st_size,
+				time_buf, pathname);
+			write(1, buf, strlen(buf));
+			write(1, "\n", 1);
+			write(1, print_buf, strlen(print_buf));
 			exit(0);
 		}
-		write(2, strerror(errno), strlen(strerror(errno)));
+		snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+		write(2, print_buf, strlen(print_buf));
 		exit(1);
 	}
-
+	write(1, "Not Yet\n", 100);
 	exit(0);
 }
 
-void	LIST(char ** buf, int argc)
-{
-
-	exit(0);
-}
-
-void	PWD(char ** buf, int argc)
+void	LIST(char *buf)
 {
 	exit(0);
 }
 
-void	CWD(char ** buf, int argc)
+void	PWD(char *buf)
 {
-
 	exit(0);
 }
 
-void	CDUP(char ** buf, int argc)
+void	CWD(char *buf)
 {
-
 	exit(0);
 }
 
-void	MKD(char ** buf, int argc)
+void	CDUP(char *buf)
 {
-
 	exit(0);
 }
 
-void	DELE(char ** buf, int argc)
+void	MKD(char *buf)
 {
-
 	exit(0);
 }
 
-void	RMD(char ** buf, int argc)
+void	DELE(char *buf)
 {
-
 	exit(0);
 }
 
-void	RN(char ** buf, int argc)
+void	RMD(char *buf)
 {
-
 	exit(0);
 }
 
-void	QUIT(char ** buf, int argc)
+void	RN(char *buf)
 {
-
 	exit(0);
 }
 
-void	UNK(char ** buf, int argc)
+void	QUIT(char *buf)
+{
+	exit(0);
+}
+
+void	UNK(char *buf)
 {
 	char	*error = "Unknown command\n";
 	write(2, error, strlen(error));

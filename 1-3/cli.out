@@ -1,1 +1,1 @@
-RNFR rename -ssd ss sa RNTO -sd
+NLST -l /dev/tty
