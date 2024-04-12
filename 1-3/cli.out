@@ -1,1 +1,1 @@
-CDUP -as sd -s
+RNFR rename -ssd ss sa RNTO -sd

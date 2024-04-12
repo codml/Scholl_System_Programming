@@ -15,8 +15,12 @@
 
 #define MAX_BUF 4096
 
-// instruction convert table, except rename //
-char *table[][2] = { {"ls", "NLST"},
+int main(int argc, char **argv)
+{
+	char buf[MAX_BUF];
+	
+	// instruction convert table, except rename //
+	char *table[][2] = { {"ls", "NLST"},
 				{"dir", "LIST"},
 				{"pwd", "PWD"},
 				{"cd", "CWD"},
@@ -25,10 +29,6 @@ char *table[][2] = { {"ls", "NLST"},
 				{"rmdir", "RMD"},
 				{"quit", "QUIT"} };
 
-int main(int argc, char **argv)
-{
-	char buf[MAX_BUF];
-	
 	///////// buf initialization //////////
 	memset(buf, 0, sizeof(buf));
 
