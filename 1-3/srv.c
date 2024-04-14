@@ -159,6 +159,9 @@ void	NLST(char *buf)
 		exit(1);
 	}
 
+	strcat(buf, "\n");
+	write(1, buf, strlen(buf));
+
 	if (optind == len)
 		pathname = ".";
 	else
@@ -166,27 +169,23 @@ void	NLST(char *buf)
 	
 	if ((dp = opendir(pathname)) == NULL)
 	{
-		if (errno == ENOTDIR && lflag)
+		if (errno == ENOTDIR && lflag && !aflag)
 		{
 			if (stat(pathname, &infor) == -1)
 			{
-				if (errno == EACCES)
-					errorM = "cannot access";
-				else if (errno == ENOENT)
-					errorM = "No such file or directory";
-				else
-					errorM = strerror(errno);
-				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", errorM);
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
 				write(2, print_buf, strlen(print_buf));
 				exit(1);
 			}
 			MtoS(&infor, pathname, print_buf);
-			strcat(buf, "\n");
-			write(1, buf, strlen(buf));
 			write(1, print_buf, strlen(print_buf));
 			exit(0);
 		}
-		snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+		if (errno == EACCES)
+			errorM = "cannot access";
+		else
+			errorM = strerror(errno);
+		snprintf(print_buf, sizeof(print_buf), "Error : %s\n", errorM);
 		write(2, print_buf, strlen(print_buf));
 		exit(1);
 	}
@@ -227,8 +226,6 @@ void	NLST(char *buf)
 	else
 		start_idx = idx;
 	
-	strcat(buf, "\n");
-	write(1, buf, strlen(buf));
 	if (lflag)
 	{
 		for (int i = start_idx; i < len; i++)
@@ -243,6 +240,9 @@ void	NLST(char *buf)
 		for (int i = start_idx; i < len; i++)
 		{
 			write(1, filename[i], strlen(filename[i]));
+			stat(filename[i], &infor);
+			if (S_ISDIR(infor.st_mode))
+				write(1, "/", 1);
 			if ((i - start_idx) % 5 == 4)
 				write(1, "\n", 1);
 			else
@@ -394,8 +394,6 @@ void	PWD(char *buf)
 
 	getcwd(path_buf, sizeof(path_buf));
 
-	strcat(buf, "\n");
-	write(1, buf, strlen(buf));
 	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
 	write(1, print_buf, strlen(print_buf));
 
@@ -540,7 +538,7 @@ void	MKD(char *buf)
 
 	for (int i = optind; i < len; i++)
 	{
-		if (mkdir(split[i], 700) == -1)
+		if (mkdir(split[i], 0700) == -1)
 		{
 			if (errno == EEXIST)
 				errorM = "File exists";
@@ -580,6 +578,27 @@ void	DELE(char *buf)
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
+
+	if (len == 1)
+	{
+		errorM = "Error: argument is required\n";
+		write(2, errorM, strlen(errorM));
+		exit(1);
+	}
+
+	for (int i = optind; i < len; i++)
+	{
+		if (unlink(split[i]) == -1)
+		{
+			snprintf(print_buf, MAX_BUF, "Error: failed to delete \'%s\'\n", split[i]);
+			write(2, print_buf, strlen(print_buf));
+		}
+		else
+		{
+			snprintf(print_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
+			write(1, print_buf, strlen(print_buf));
+		}
+	}
 	exit(0);
 }
 
@@ -604,6 +623,27 @@ void	RMD(char *buf)
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
+
+	if (len == 1)
+	{
+		errorM = "Error: argument is required\n";
+		write(2, errorM, strlen(errorM));
+		exit(1);
+	}
+
+	for (int i = optind; i < len; i++)
+	{
+		if (rmdir(split[i]) == -1)
+		{
+			snprintf(print_buf, MAX_BUF, "Error: failed to remove \'%s\'\n", split[i]);
+			write(2, print_buf, strlen(print_buf));
+		}
+		else
+		{
+			snprintf(print_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
+			write(1, print_buf, strlen(print_buf));
+		}
+	}
 	exit(0);
 }
 
@@ -615,6 +655,7 @@ void	RN(char *buf)
 	char	*split[256];
 	char	tmp_buf[MAX_BUF];
 	char	print_buf[MAX_BUF];
+	struct stat infor;
 	opterr = 0;
 
 	strcpy(tmp_buf, buf);
@@ -628,6 +669,29 @@ void	RN(char *buf)
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
+
+	if (len != 4 | strcmp(split[2], "RNTO"))
+	{
+		errorM = "Error: two argumens are required\n";
+		write(2, errorM, strlen(errorM));
+		exit(1);
+	}
+
+	if (!stat(split[3], &infor))
+	{
+		errorM = "Error: name to change already exists\n";
+		write(2, errorM, strlen(errorM));
+		exit(1);
+	}
+	if (rename(split[1], split[3]) == -1)
+	{
+		snprintf(print_buf, MAX_BUF, "Error: %s\n", strerror(errno));
+		write(2, print_buf, strlen(print_buf));
+		exit(1);
+	}
+
+	snprintf(print_buf, MAX_BUF, "%s %s\n%s %s\n", split[0], split[1], split[2], split[3]);
+	write(1, print_buf, strlen(print_buf));
 	exit(0);
 }
 
@@ -652,6 +716,15 @@ void	QUIT(char *buf)
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
+
+	if (len != 1)
+	{
+		errorM = "Error: argument is not required\n";
+		write(1, errorM, strlen(errorM));
+		exit(1);
+	}
+	snprintf(print_buf, MAX_BUF, "%s success\n", split[0]);
+	write(1, print_buf, strlen(print_buf));
 	exit(0);
 }
 

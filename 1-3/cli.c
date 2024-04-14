@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 	{
 		strcat(buf, "RNFR");
 		/////// give all option && argument to RNFR except last argument ///////
-		for (int i = 1; i < argc - 1; i++)
+		for (int i = 2; i < argc - 1; i++)
 		{
 			strcat(buf, " ");
 			strcat(buf, argv[i]);
