@@ -9,141 +9,6 @@
 // Description  :execute ftp commands read from standard input        //
 ////////////////////////////////////////////////////////////////////////
 
-
-////////////////////////////////////////////////////////////////////////
-// MtoS                                                               //
-// ================================================================== //
-// Input: struct stat * -> file stat structure                        //
-//        const char * -> file path name                              //
-//        char * -> buf for file information string                   //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: change file stat structure to long string format(ls -l)   //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// NLST                                                               //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute NLST command(in cli: ls)                          //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// LIST                                                               //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute LIST command(in cli: dir == ls -al)               //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// PWD                                                                //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute PWD command(in cli: pwd)                          //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// CWD                                                                //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute CWD command(in cli: cd)                           //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// CDUP                                                               //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute CDUP command(in cli: cd ..)                       //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// MKD                                                                //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute MKD command(in cli: mkdir                         //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// DELE                                                               //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute DELE command(in cli: delete)                      //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// RMD                                                                //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute RMD command(in cli: rmdir)                        //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// RN                                                                 //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute RNFR & RNTO command(in cli: rename)               //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// QUIT                                                               //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute QUIT command(in cli: quit)                        //
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-// UNK                                                                //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute unknown command                                   //
-////////////////////////////////////////////////////////////////////////
-
-
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -203,16 +68,30 @@ void	main()
 
 	for (int i = 0; i < 11; i++)
 	{
+		/////// if command in buf matches with function name, execute the function //////
 		if (!strncmp(buf, table[i].func_name, strlen(table[i].func_name)))
-			(table[i].fp)(buf); // each function has exit()
+			(table[i].fp)(buf); // each function has exit(), so no break
 	}
 }
+
+////////////////////////////////////////////////////////////////////////
+// MtoS                                                               //
+// ================================================================== //
+// Input: struct stat * -> file stat structure                        //
+//        const char * -> file path name                              //
+//        char * -> buf for file information string                   //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: change file stat structure to long string format(in ls -l)//
+////////////////////////////////////////////////////////////////////////
 
 void	MtoS(struct stat *infor, const char *pathname, char *print_buf)
 {
 	char	time_buf[32];
 	char	str[11];
 
+	////// determine file type //////
 	if (S_ISREG(infor->st_mode))
 		str[0] = '-';
 	else if (S_ISDIR(infor->st_mode))
@@ -227,35 +106,52 @@ void	MtoS(struct stat *infor, const char *pathname, char *print_buf)
 		str[0] = 'l';
 	else if (S_ISSOCK(infor->st_mode))
 		str[0] = 's';
+	
+	////// determine user's permission r: read, w: write, x: execute //////
 	str[1] = (infor->st_mode & S_IRUSR) ? 'r' : '-';
     str[2] = (infor->st_mode & S_IWUSR) ? 'w' : '-';
     str[3] = (infor->st_mode & S_IXUSR) ? 'x' : '-';
+	////// determine group's permission r: read, w: write, x: execute //////
     str[4] = (infor->st_mode & S_IRGRP) ? 'r' : '-';
     str[5] = (infor->st_mode & S_IWGRP) ? 'w' : '-';
     str[6] = (infor->st_mode & S_IXGRP) ? 'x' : '-';
+	////// determine other's permission r: read, w: write, x: execute //////
     str[7] = (infor->st_mode & S_IROTH) ? 'r' : '-';
     str[8] = (infor->st_mode & S_IWOTH) ? 'w' : '-';
     str[9] = (infor->st_mode & S_IXOTH) ? 'x' : '-';
+	////// null-terminated //////
     str[10] = '\0';
-	strftime(time_buf, sizeof(time_buf), "%b %d %R",
-				localtime(&(infor->st_mtime)));
+
+	////// change time_t to formatted string time, stored in time_buf //////
+	strftime(time_buf, sizeof(time_buf), "%b %d %R", localtime(&(infor->st_mtime)));
+
+	////// if the infor's file is directory, append '/' next to the file name //////
 	if (S_ISDIR(infor->st_mode))
 	{
-		snprintf(print_buf, MAX_BUF,
-			"%s %2ld %s %s %6ld %s %s/\n",
+		////// write formatted file informantion string to buf using snprintf() ////// 
+		snprintf(print_buf, MAX_BUF, "%s %2ld %s %s %6ld %s %s/\n",
 			str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
 			getgrgid(infor->st_gid)->gr_name, infor->st_size,
 			time_buf, pathname);
 	}
 	else
 	{
-		snprintf(print_buf, MAX_BUF,
-			"%s %2ld %s %s %6ld %s %s\n",
+		snprintf(print_buf, MAX_BUF, "%s %2ld %s %s %6ld %s %s\n",
 			str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
 			getgrgid(infor->st_gid)->gr_name, infor->st_size,
 			time_buf, pathname);
 	}
 }
+
+////////////////////////////////////////////////////////////////////////
+// NLST                                                               //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute NLST command(in cli: ls)                          //
+////////////////////////////////////////////////////////////////////////
 
 void	NLST(char *buf)
 {
@@ -409,6 +305,16 @@ void	NLST(char *buf)
 	exit(0);
 }
 
+////////////////////////////////////////////////////////////////////////
+// LIST                                                               //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute LIST command(in cli: dir == ls -al)               //
+////////////////////////////////////////////////////////////////////////
+
 void	LIST(char *buf)
 {
 	int				idx;
@@ -517,6 +423,16 @@ void	LIST(char *buf)
 	exit(0);
 }
 
+////////////////////////////////////////////////////////////////////////
+// PWD                                                                //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute PWD command(in cli: pwd)                          //
+////////////////////////////////////////////////////////////////////////
+
 void	PWD(char *buf)
 {
 	int		len = 0;
@@ -554,6 +470,16 @@ void	PWD(char *buf)
 
 	exit(0);
 }
+
+////////////////////////////////////////////////////////////////////////
+// CWD                                                                //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute CWD command(in cli: cd)                           //
+////////////////////////////////////////////////////////////////////////
 
 void	CWD(char *buf)
 {
@@ -613,6 +539,16 @@ void	CWD(char *buf)
 	exit(0);
 }
 
+////////////////////////////////////////////////////////////////////////
+// CDUP                                                               //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute CDUP command(in cli: cd ..)                       //
+////////////////////////////////////////////////////////////////////////
+
 void	CDUP(char *buf)
 {
 	int		len = 0;
@@ -661,6 +597,16 @@ void	CDUP(char *buf)
 	write(1, print_buf, strlen(print_buf));
 	exit(0);
 }
+
+////////////////////////////////////////////////////////////////////////
+// MKD                                                                //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute MKD command(in cli: mkdir                         //
+////////////////////////////////////////////////////////////////////////
 
 void	MKD(char *buf)
 {
@@ -712,6 +658,16 @@ void	MKD(char *buf)
 	exit(0);
 }
 
+////////////////////////////////////////////////////////////////////////
+// DELE                                                               //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute DELE command(in cli: delete)                      //
+////////////////////////////////////////////////////////////////////////
+
 void	DELE(char *buf)
 {
 	int		len = 0;
@@ -757,6 +713,16 @@ void	DELE(char *buf)
 	exit(0);
 }
 
+////////////////////////////////////////////////////////////////////////
+// RMD                                                                //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute RMD command(in cli: rmdir)                        //
+////////////////////////////////////////////////////////////////////////
+
 void	RMD(char *buf)
 {
 	int		len = 0;
@@ -801,6 +767,16 @@ void	RMD(char *buf)
 	}
 	exit(0);
 }
+
+////////////////////////////////////////////////////////////////////////
+// RN                                                                 //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute RNFR & RNTO command(in cli: rename)               //
+////////////////////////////////////////////////////////////////////////
 
 void	RN(char *buf)
 {
@@ -850,6 +826,16 @@ void	RN(char *buf)
 	exit(0);
 }
 
+////////////////////////////////////////////////////////////////////////
+// QUIT                                                               //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute QUIT command(in cli: quit)                        //
+////////////////////////////////////////////////////////////////////////
+
 void	QUIT(char *buf)
 {
 	int		len = 0;
@@ -882,6 +868,16 @@ void	QUIT(char *buf)
 	write(1, print_buf, strlen(print_buf));
 	exit(0);
 }
+
+////////////////////////////////////////////////////////////////////////
+// UNK                                                                //
+// ================================================================== //
+// Input: char * ->  ftp command from cli                             //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: execute unknown command                                   //
+////////////////////////////////////////////////////////////////////////
 
 void	UNK(char *buf)
 {
