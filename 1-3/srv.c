@@ -115,22 +115,23 @@ void	NLST(char *buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
+	char			*pathname;
 	char			*errorM;
 	char			*tmp;
 
 	DIR				*dp;
 	struct dirent	*dirp;
 	struct stat		infor;
-
+	opterr = 0;
 
 	char			*split[256];
 	char			*filename[256];
-	char			pathname[256];
+	char			tmp_buf[MAX_BUF];
 	char			print_buf[MAX_BUF];
 	opterr = 0;
 
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -159,9 +160,9 @@ void	NLST(char *buf)
 	}
 
 	if (optind == len)
-		strcpy(pathname, ".");
+		pathname = ".";
 	else
-		strcpy(pathname, split[optind]);
+		pathname = split[optind];
 	
 	if ((dp = opendir(pathname)) == NULL)
 	{
@@ -249,6 +250,7 @@ void	NLST(char *buf)
 		}
 		write(1, "\n", 1);
 	}
+	closedir(dp);
 	exit(0);
 }
 
@@ -259,6 +261,7 @@ void	LIST(char *buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
+	char			*pathname;
 	char			*errorM;
 	char			*tmp;
 
@@ -270,11 +273,12 @@ void	LIST(char *buf)
 	char			*split[256];
 	char			*filename[256];
 
-	char			pathname[256];
+	char			tmp_buf[MAX_BUF];
 	char			print_buf[MAX_BUF];
+	opterr = 0;
 
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -293,9 +297,9 @@ void	LIST(char *buf)
 	}
 
 	if (optind == len)
-		strcpy(pathname, ".");
+		pathname = ".";
 	else
-		strcpy(pathname, split[optind]);
+		pathname = split[optind];
 	
 	if ((dp = opendir(pathname)) == NULL)
 	{
@@ -354,7 +358,7 @@ void	LIST(char *buf)
 		MtoS(&infor, filename[i], print_buf);
 		write(1, print_buf, strlen(print_buf));
 	}
-
+	closedir(dp);
 	exit(0);
 }
 
@@ -365,11 +369,12 @@ void	PWD(char *buf)
 
 	char	*split[256];
 	char	path_buf[257];
+	char	tmp_buf[MAX_BUF];
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -404,11 +409,12 @@ void	CWD(char *buf)
 
 	char	*split[256];
 	char	path_buf[257];
+	char	tmp_buf[MAX_BUF];
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -505,15 +511,16 @@ void	CDUP(char *buf)
 
 void	MKD(char *buf)
 {
-	int				len = 0;
-	char			*errorM;
+	int		len = 0;
+	char	*errorM;
 
-	char			*split[256];
-	char			print_buf[MAX_BUF];
+	char	*split[256];
+	char	tmp_buf[MAX_BUF];
+	char	print_buf[MAX_BUF];
 	opterr = 0;
 	
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -526,14 +533,27 @@ void	MKD(char *buf)
 
 	if (len == 1)
 	{
-		errorM = "Error: argument is equired\n";
+		errorM = "Error: argument is required\n";
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
 
 	for (int i = optind; i < len; i++)
 	{
-		if (mkdir(split[i], 644));
+		if (mkdir(split[i], 700) == -1)
+		{
+			if (errno == EEXIST)
+				errorM = "File exists";
+			else
+				errorM = strerror(errno);
+			snprintf(print_buf, MAX_BUF, "Error: cannot create directory \'%s\': %s\n", split[i], errorM);
+			write(2, print_buf, strlen(print_buf));
+		}
+		else
+		{
+			snprintf(print_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
+			write(1, print_buf, strlen(print_buf));
+		}
 	}
 
 	exit(0);
@@ -541,15 +561,16 @@ void	MKD(char *buf)
 
 void	DELE(char *buf)
 {
-	int				len = 0;
-	char			*errorM;
+	int		len = 0;
+	char	*errorM;
 
-	char			*split[256];
-	char			print_buf[MAX_BUF];
+	char	*split[256];
+	char	tmp_buf[MAX_BUF];
+	char	print_buf[MAX_BUF];
 	opterr = 0;
-	
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -564,15 +585,16 @@ void	DELE(char *buf)
 
 void	RMD(char *buf)
 {
-	int				len = 0;
-	char			*errorM;
+	int		len = 0;
+	char	*errorM;
 
-	char			*split[256];
-	char			print_buf[MAX_BUF];
+	char	*split[256];
+	char	tmp_buf[MAX_BUF];
+	char	print_buf[MAX_BUF];
 	opterr = 0;
-	
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -587,15 +609,16 @@ void	RMD(char *buf)
 
 void	RN(char *buf)
 {
-	int				len = 0;
-	char			*errorM;
+	int		len = 0;
+	char	*errorM;
 
-	char			*split[256];
-	char			print_buf[MAX_BUF];
+	char	*split[256];
+	char	tmp_buf[MAX_BUF];
+	char	print_buf[MAX_BUF];
 	opterr = 0;
-	
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
@@ -610,15 +633,16 @@ void	RN(char *buf)
 
 void	QUIT(char *buf)
 {
-	int				len = 0;
-	char			*errorM;
+	int		len = 0;
+	char	*errorM;
 
-	char			*split[256];
-	char			print_buf[MAX_BUF];
+	char	*split[256];
+	char	tmp_buf[MAX_BUF];
+	char	print_buf[MAX_BUF];
 	opterr = 0;
-	
-	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
