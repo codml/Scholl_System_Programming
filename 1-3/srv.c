@@ -11,7 +11,7 @@
 
 #define MAX_BUF 4096
 
-void	MtoS(struct stat *infor, char *pathname, char *print_buf);
+void	MtoS(struct stat *infor, const char *pathname, char *print_buf);
 void	NLST(char *buf);
 void	LIST(char *buf);
 void	PWD(char *buf);
@@ -57,7 +57,7 @@ void	main()
 	}
 }
 
-void	MtoS(struct stat *infor, char *pathname, char *print_buf)
+void	MtoS(struct stat *infor, const char *pathname, char *print_buf)
 {
 	char	time_buf[32];
 	char	str[11];
@@ -89,17 +89,21 @@ void	MtoS(struct stat *infor, char *pathname, char *print_buf)
 	strftime(time_buf, sizeof(time_buf), "%b %d %R",
 				localtime(&(infor->st_mtime)));
 	if (S_ISDIR(infor->st_mode))
+	{
 		snprintf(print_buf, MAX_BUF,
-		"%s %2ld %s %s %5ld %s %s/\n",
-		str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
-		getgrgid(infor->st_gid)->gr_name, infor->st_size,
-		time_buf, pathname);
-	else
-		snprintf(print_buf, MAX_BUF,
-			"%s %2ld %s %s %5ld %s %s\n",
+			"%s %2ld %s %s %6ld %s %s/\n",
 			str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
 			getgrgid(infor->st_gid)->gr_name, infor->st_size,
 			time_buf, pathname);
+	}
+	else
+	{
+		snprintf(print_buf, MAX_BUF,
+			"%s %2ld %s %s %6ld %s %s\n",
+			str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
+			getgrgid(infor->st_gid)->gr_name, infor->st_size,
+			time_buf, pathname);
+	}
 }
 
 void	NLST(char *buf)
@@ -111,7 +115,6 @@ void	NLST(char *buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
-	char			*pathname;
 	char			*errorM;
 	char			*tmp;
 
@@ -122,7 +125,7 @@ void	NLST(char *buf)
 
 	char			*split[256];
 	char			*filename[256];
-
+	char			pathname[256];
 	char			print_buf[MAX_BUF];
 	opterr = 0;
 
@@ -156,15 +159,15 @@ void	NLST(char *buf)
 	}
 
 	if (optind == len)
-		pathname = ".";
+		strcpy(pathname, ".");
 	else
-		pathname = split[optind];
+		strcpy(pathname, split[optind]);
 	
 	if ((dp = opendir(pathname)) == NULL)
 	{
 		if (errno == ENOTDIR && lflag)
 		{
-			if(stat(pathname, &infor) == -1)
+			if (stat(pathname, &infor) == -1)
 			{
 				if (errno == EACCES)
 					errorM = "cannot access";
@@ -256,7 +259,6 @@ void	LIST(char *buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
-	char			*pathname;
 	char			*errorM;
 	char			*tmp;
 
@@ -268,6 +270,7 @@ void	LIST(char *buf)
 	char			*split[256];
 	char			*filename[256];
 
+	char			pathname[256];
 	char			print_buf[MAX_BUF];
 
 	strcpy(print_buf, buf);
@@ -290,9 +293,9 @@ void	LIST(char *buf)
 	}
 
 	if (optind == len)
-		pathname = ".";
+		strcpy(pathname, ".");
 	else
-		pathname = split[optind];
+		strcpy(pathname, split[optind]);
 	
 	if ((dp = opendir(pathname)) == NULL)
 	{
@@ -418,7 +421,7 @@ void	CWD(char *buf)
 
 	if (len == 1)
 	{
-		errorM = "Error: one argument is equired\n";
+		errorM = "Error: argument is required\n";
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
@@ -520,7 +523,19 @@ void	MKD(char *buf)
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
-	
+
+	if (len == 1)
+	{
+		errorM = "Error: argument is equired\n";
+		write(2, errorM, strlen(errorM));
+		exit(1);
+	}
+
+	for (int i = optind; i < len; i++)
+	{
+		if (mkdir(split[i], 644));
+	}
+
 	exit(0);
 }
 
