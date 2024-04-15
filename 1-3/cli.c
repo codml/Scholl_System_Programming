@@ -29,6 +29,9 @@ int main(int argc, char **argv)
 				{"rmdir", "RMD"},
 				{"quit", "QUIT"} };
 
+	if (argc == 1)
+		return 1;
+
 	///////// buf initialization //////////
 	memset(buf, 0, sizeof(buf));
 
