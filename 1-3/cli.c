@@ -29,6 +29,7 @@ int main(int argc, char **argv)
 				{"rmdir", "RMD"},
 				{"quit", "QUIT"} };
 
+	////// if no arguments, print error ///////
 	if (argc == 1)
 	{
 		strcpy(buf, "Error: cli needs instruction\n");
