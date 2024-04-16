@@ -33,7 +33,6 @@ void	DELE(char *buf);
 void	RMD(char *buf);
 void	RN(char *buf);
 void	QUIT(char *buf);
-void	UNK(char *buf);
 
 
 ////// a structure for fucntion name table //////
@@ -47,7 +46,7 @@ void	main()
 	char	buf[MAX_BUF];
 
 	////// function name : function pointer dictionary //////
-	struct s_table table[11] = {
+	struct s_table table[10] = {
 		{"NLST", NLST},
 		{"LIST", LIST},
 		{"PWD", PWD},
@@ -57,8 +56,7 @@ void	main()
 		{"DELE", DELE},
 		{"RMD", RMD},
 		{"RNFR", RN},
-		{"QUIT", QUIT},
-		{"UNK", UNK}
+		{"QUIT", QUIT}
 	};
 
 	memset(buf, 0, sizeof(buf));
@@ -66,12 +64,17 @@ void	main()
 	////// read FTP command from standard input ///////
 	read(0, buf, sizeof(buf));
 
-	for (int i = 0; i < 11; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		/////// if command in buf matches with function name, execute the function //////
 		if (!strncmp(buf, table[i].func_name, strlen(table[i].func_name)))
 			(table[i].fp)(buf); // each function has exit(), so no break
 	}
+	
+	////// print error for unknown command ///////
+	char	*error = "Unknown command\n";
+	write(2, error, strlen(error));
+	exit(1);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -958,22 +961,4 @@ void	QUIT(char *buf)
 	snprintf(print_buf, MAX_BUF, "%s success\n", split[0]);
 	write(1, print_buf, strlen(print_buf));
 	exit(0);
-}
-
-////////////////////////////////////////////////////////////////////////
-// UNK                                                                //
-// ================================================================== //
-// Input: char * ->  ftp command from cli                             //
-//                                                                    //
-// Output: None                                                       //
-//                                                                    //
-// Purpose: execute unknown command                                   //
-////////////////////////////////////////////////////////////////////////
-
-void	UNK(char *buf)
-{
-	////// print error for unknown command ///////
-	char	*error = "Unknown command\n";
-	write(2, error, strlen(error));
-	exit(1);
 }
