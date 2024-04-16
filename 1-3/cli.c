@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 // File Name    :cli.c                                                //
-// Date         :2024/04/14                                           //
+// Date         :2024/04/16                                           //
 // OS           :Ubuntu 20.04.6 LTS 64bits                            //
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
@@ -30,7 +30,12 @@ int main(int argc, char **argv)
 				{"quit", "QUIT"} };
 
 	if (argc == 1)
+	{
+		strcpy(buf, "Error: cli needs instruction\n");
+		write(2, buf, strlen(buf));
 		return 1;
+	}
+		
 
 	///////// buf initialization //////////
 	memset(buf, 0, sizeof(buf));

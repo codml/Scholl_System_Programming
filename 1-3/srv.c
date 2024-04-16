@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 // File Name    :srv.c                                                //
-// Date         :2024/04/14                                           //
+// Date         :2024/04/16                                           //
 // OS           :Ubuntu 20.04.6 LTS 64bits                            //
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
@@ -177,11 +177,13 @@ void	NLST(char *buf)
 	char			print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if unknown option -> error ///////////
 	while ((c = getopt(len, split, "al")) != -1)
 	{
 		switch (c)
@@ -199,6 +201,7 @@ void	NLST(char *buf)
 		}
 	}
 
+	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
 	{
 		errorM = "Error: too many arguments\n";
@@ -206,6 +209,7 @@ void	NLST(char *buf)
 		exit(1);
 	}
 
+	/////////// print command(NLST) and  options //////
 	for (int i = 0; i < optind; i++)
 	{
 		write(1, split[i], strlen(split[i]));
@@ -213,25 +217,33 @@ void	NLST(char *buf)
 	}
 	write(1, "\n", 1);
 
+	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
 		pathname = ".";
 	else
 		pathname = split[optind];
 	
+	////////////////////// open directory stream by pathname ////////////////////////////
+	/////////// if pathname is not a directory or has other problem, dp = NULL //////////
 	if ((dp = opendir(pathname)) == NULL)
 	{
+		////// if pathname is not a directory and command has only -l option, not error //////
 		if (errno == ENOTDIR && lflag && !aflag)
 		{
+			//////// load file status in struct stat infor ////////
 			if (stat(pathname, &infor) == -1)
 			{
+				/////// error handling when failed to load file status ///////
 				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
 				write(2, print_buf, strlen(print_buf));
 				exit(1);
 			}
+			////////// print formatted file status string and exit //////////
 			MtoS(&infor, pathname, print_buf);
 			write(1, print_buf, strlen(print_buf));
 			exit(0);
 		}
+		///////// if error caused by other problem, print error string and exit ////////
 		if (errno == EACCES)
 			errorM = "cannot access";
 		else
@@ -240,15 +252,18 @@ void	NLST(char *buf)
 		write(2, print_buf, strlen(print_buf));
 		exit(1);
 	}
+
+	////////////// if succeed to open directory stream, read directory entries and store in filename[] ///////////
 	idx = 0;
-	while (dirp = readdir(dp)) // read until meet NULL -> means read all directory entries
+	while (dirp = readdir(dp)) // read until meet NULL -> means read all file names in the directory //
 	{
 		if (dirp->d_ino != 0)
 			filename[idx++] = dirp->d_name;
 	}
 	
-	len = idx;
 
+	//////////// sort filenames by ascii code ///////////
+	len = idx;
 	for (int i = 0; i < len - 1; i++)
 	{
 		for (int j = i + 1; j < len; j++)
@@ -262,6 +277,7 @@ void	NLST(char *buf)
 		}
 	}
 
+	///////////// find '.', '..', and hidden file index -> to implement no -a option //////////////
 	idx = len;
 	for (int i = optind; i < len; i++)
 	{
@@ -271,28 +287,43 @@ void	NLST(char *buf)
 			break;
 		}
 	}
-
+	
+	////////////// if '-a' option exists, print hidden files ////////////
 	if (aflag)
 		start_idx = 0;
 	else
 		start_idx = idx;
 	
+	///////////// if '-l' option exist, print file status information //////////
 	if (lflag)
 	{
+		////// print all file status information for directory entries ///////
 		for (int i = start_idx; i < len; i++)
 		{
-			stat(filename[i], &infor);
+			if (stat(filename[i], &infor) == -1)
+			{
+				/////// error handling when failed to load file status ///////
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+				write(2, print_buf, strlen(print_buf));
+				exit(1);
+			}
 			MtoS(&infor, filename[i], print_buf);
 			write(1, print_buf, strlen(print_buf));
 		}
 	}
-	else
+	else ////// if no '-l' option, just print file names //////
 	{
 		for (int i = start_idx; i < len; i++)
 		{
 			write(1, filename[i], strlen(filename[i]));
-			stat(filename[i], &infor);
-			if (S_ISDIR(infor.st_mode))
+			if (stat(filename[i], &infor) == -1)
+			{
+				/////// error handling when failed to load file status ///////
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+				write(2, print_buf, strlen(print_buf));
+				exit(1);
+			}
+			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
 				write(1, "/", 1);
 			if ((i - start_idx) % 5 == 4)
 				write(1, "\n", 1);
@@ -338,11 +369,13 @@ void	LIST(char *buf)
 	char			print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -350,6 +383,7 @@ void	LIST(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
 	{
 		errorM = "Error: too many arguments\n";
@@ -357,13 +391,20 @@ void	LIST(char *buf)
 		exit(1);
 	}
 
+	///////// print command name //////////
+	write(1, split[0], strlen(split[0]));
+	write(1, "\n", 1);
+
+	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
 		pathname = ".";
 	else
 		pathname = split[optind];
 	
+	////////////////////// open directory stream by pathname ////////////////////////////
 	if ((dp = opendir(pathname)) == NULL)
 	{
+		////// if pathname is not a directory and command has only -l option, not error //////
 		if (errno == ENOTDIR)
 		{
 			if(stat(pathname, &infor) == -1)
@@ -384,11 +425,13 @@ void	LIST(char *buf)
 			write(1, print_buf, strlen(print_buf));
 			exit(0);
 		}
+		///////// if error caused by other problem, print error string and exit ////////
 		snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
 		write(2, print_buf, strlen(print_buf));
 		exit(1);
 	}
 
+	////////////// if succeed to open directory stream, read directory entries and store in filename[] ///////////
 	idx = 0;
 	while (dirp = readdir(dp)) // read until meet NULL -> means read all directory entries
 	{
@@ -396,8 +439,8 @@ void	LIST(char *buf)
 			filename[idx++] = dirp->d_name;
 	}
 	
+	//////////// sort filenames by ascii code ///////////
 	len = idx;
-
 	for (int i = 0; i < len - 1; i++)
 	{
 		for (int j = i + 1; j < len; j++)
@@ -410,9 +453,7 @@ void	LIST(char *buf)
 			}
 		}
 	}
-	
-	strcat(buf, "\n");
-	write(1, buf, strlen(buf));
+	//////////// same as ls -la, print file stat infor//////////////////
 	for (int i = 0; i < len; i++)
 	{
 		stat(filename[i], &infor);
@@ -444,11 +485,13 @@ void	PWD(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -456,6 +499,7 @@ void	PWD(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are not zero -> error ////////////
 	if (len > 1)
 	{
 		errorM = "Error: argument is not required\n";
@@ -463,11 +507,12 @@ void	PWD(char *buf)
 		exit(1);
 	}
 
+	//////////// get current working directory in path_buf ///////////
 	getcwd(path_buf, sizeof(path_buf));
 
+	//////////// print current working directory ////////////
 	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
 	write(1, print_buf, strlen(print_buf));
-
 	exit(0);
 }
 
@@ -492,11 +537,13 @@ void	CWD(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -504,6 +551,7 @@ void	CWD(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are zero -> error ////////////
 	if (len == 1)
 	{
 		errorM = "Error: argument is required\n";
@@ -511,6 +559,7 @@ void	CWD(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are more than one -> error ////////////
 	if (len > 2)
 	{
 		errorM = "Error: too much argument\n";
@@ -518,6 +567,7 @@ void	CWD(char *buf)
 		exit(1);
 	}
 
+	///////////// change working directory to argv[1]. if failed, print error and exit //////////////
 	if (chdir(split[1])< 0)
 	{
 		if (errno == ENOENT)
@@ -529,13 +579,16 @@ void	CWD(char *buf)
 		exit(1);
 	}
 	
+	/////////// to check the result, get current working directory ///////////////
 	getcwd(path_buf, sizeof(path_buf));
 	
+	/////// print command ///////
 	strcat(buf, "\n");
 	write(1, buf, strlen(buf));
+
+	///////// print current working directory //////////
 	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
 	write(1, print_buf, strlen(print_buf));
-
 	exit(0);
 }
 
@@ -559,11 +612,13 @@ void	CDUP(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(print_buf, buf);
 	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -571,6 +626,7 @@ void	CDUP(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are not zero -> error ////////////
 	if (len > 1)
 	{
 		errorM = "Error: too much argument\n";
@@ -578,6 +634,7 @@ void	CDUP(char *buf)
 		exit(1);
 	}
 
+	////////////// change directory to parent directory. if failed, print error message ///////////////
 	if (chdir("..")< 0)
 	{
 		if (errno == ENOENT)
@@ -589,8 +646,10 @@ void	CDUP(char *buf)
 		exit(1);
 	}
 	
+	/////////// to check the result, get current working directory ///////////////
 	getcwd(path_buf, sizeof(path_buf));
 	
+	///////// print command, current working directory //////////
 	strcat(buf, "\n");
 	write(1, buf, strlen(buf));
 	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
@@ -618,11 +677,13 @@ void	MKD(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 	
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -630,6 +691,7 @@ void	MKD(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are zero -> error ////////////
 	if (len == 1)
 	{
 		errorM = "Error: argument is required\n";
@@ -637,10 +699,13 @@ void	MKD(char *buf)
 		exit(1);
 	}
 
+	/////////// try to make directory by arguments(file_name)
 	for (int i = optind; i < len; i++)
 	{
+		////// make directory(filename, permission) //////
 		if (mkdir(split[i], 0700) == -1)
 		{
+			////////// if failed to make, print error /////////
 			if (errno == EEXIST)
 				errorM = "File exists";
 			else
@@ -650,6 +715,7 @@ void	MKD(char *buf)
 		}
 		else
 		{
+			/// print command, file name ///
 			snprintf(print_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
 			write(1, print_buf, strlen(print_buf));
 		}
@@ -678,11 +744,13 @@ void	DELE(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -690,6 +758,7 @@ void	DELE(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are zero -> error ////////////
 	if (len == 1)
 	{
 		errorM = "Error: argument is required\n";
@@ -697,15 +766,19 @@ void	DELE(char *buf)
 		exit(1);
 	}
 
+	/////////// remove each files that correspond with the arguments ///////////
 	for (int i = optind; i < len; i++)
 	{
+		/////// unlink()-> remove file //////////
 		if (unlink(split[i]) == -1)
 		{
+			////// if failed to remove, print error message //////
 			snprintf(print_buf, MAX_BUF, "Error: failed to delete \'%s\'\n", split[i]);
 			write(2, print_buf, strlen(print_buf));
 		}
 		else
 		{
+			/////// print result ////////
 			snprintf(print_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
 			write(1, print_buf, strlen(print_buf));
 		}
@@ -733,11 +806,13 @@ void	RMD(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -745,6 +820,7 @@ void	RMD(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are zero -> error ////////////
 	if (len == 1)
 	{
 		errorM = "Error: argument is required\n";
@@ -752,8 +828,10 @@ void	RMD(char *buf)
 		exit(1);
 	}
 
+	//////////// remove empty directories that correspond with the arguments //////////
 	for (int i = optind; i < len; i++)
 	{
+		/////// rmdir() -> remove empty direcoty. if failed -> print error ///////
 		if (rmdir(split[i]) == -1)
 		{
 			snprintf(print_buf, MAX_BUF, "Error: failed to remove \'%s\'\n", split[i]);
@@ -761,6 +839,7 @@ void	RMD(char *buf)
 		}
 		else
 		{
+			//////// print result /////////
 			snprintf(print_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
 			write(1, print_buf, strlen(print_buf));
 		}
@@ -789,11 +868,13 @@ void	RN(char *buf)
 	struct stat infor;
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -801,6 +882,7 @@ void	RN(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are not two(old, new) -> error ////////////
 	if (len != 4 | strcmp(split[2], "RNTO"))
 	{
 		errorM = "Error: two argumens are required\n";
@@ -808,12 +890,15 @@ void	RN(char *buf)
 		exit(1);
 	}
 
+	////// if file exist, stat() will return 0  -> rename error //////
 	if (!stat(split[3], &infor))
 	{
 		errorM = "Error: name to change already exists\n";
 		write(2, errorM, strlen(errorM));
 		exit(1);
 	}
+
+	////// if failed to rename, print error and exit //////
 	if (rename(split[1], split[3]) == -1)
 	{
 		snprintf(print_buf, MAX_BUF, "Error: %s\n", strerror(errno));
@@ -821,6 +906,7 @@ void	RN(char *buf)
 		exit(1);
 	}
 
+	////// print result //////
 	snprintf(print_buf, MAX_BUF, "%s %s\n%s %s\n", split[0], split[1], split[2], split[3]);
 	write(1, print_buf, strlen(print_buf));
 	exit(0);
@@ -846,11 +932,13 @@ void	QUIT(char *buf)
 	char	print_buf[MAX_BUF];
 	opterr = 0;
 
+	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
 		errorM = "Error: invalid option\n";
@@ -858,12 +946,15 @@ void	QUIT(char *buf)
 		exit(1);
 	}
 
+	//////////// if # of arguments are not zero -> error ////////////
 	if (len != 1)
 	{
 		errorM = "Error: argument is not required\n";
 		write(1, errorM, strlen(errorM));
 		exit(1);
 	}
+
+	////// print result ///////
 	snprintf(print_buf, MAX_BUF, "%s success\n", split[0]);
 	write(1, print_buf, strlen(print_buf));
 	exit(0);
@@ -881,6 +972,7 @@ void	QUIT(char *buf)
 
 void	UNK(char *buf)
 {
+	////// print error for unknown command ///////
 	char	*error = "Unknown command\n";
 	write(2, error, strlen(error));
 	exit(1);
