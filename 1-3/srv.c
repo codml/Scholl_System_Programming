@@ -423,8 +423,6 @@ void	LIST(char *buf)
 				exit(1);
 			}
 			MtoS(&infor, pathname, print_buf);
-			strcat(buf, "\n");
-			write(1, buf, strlen(buf));
 			write(1, print_buf, strlen(print_buf));
 			exit(0);
 		}
