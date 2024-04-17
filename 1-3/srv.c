@@ -303,13 +303,7 @@ void	NLST(char *buf)
 		////// print all file status information for directory entries ///////
 		for (int i = start_idx; i < len; i++)
 		{
-			if (stat(filename[i], &infor) == -1)
-			{
-				/////// error handling when failed to load file status ///////
-				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
-				write(2, print_buf, strlen(print_buf));
-				exit(1);
-			}
+			stat(filename[i], &infor);
 			MtoS(&infor, filename[i], print_buf);
 			write(1, print_buf, strlen(print_buf));
 		}
@@ -319,13 +313,7 @@ void	NLST(char *buf)
 		for (int i = start_idx; i < len; i++)
 		{
 			write(1, filename[i], strlen(filename[i]));
-			if (stat(filename[i], &infor) == -1)
-			{
-				/////// error handling when failed to load file status ///////
-				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
-				write(2, print_buf, strlen(print_buf));
-				exit(1);
-			}
+			stat(filename[i], &infor);
 			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
 				write(1, "/", 1);
 			if ((i - start_idx) % 5 == 4)
