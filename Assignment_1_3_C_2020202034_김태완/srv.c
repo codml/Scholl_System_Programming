@@ -226,7 +226,7 @@ void	NLST(char *buf)
 		pathname = ".";
 	else
 		pathname = split[optind];
-	printf("%s\n", pathname);
+
 	////////////////////// open directory stream by pathname ////////////////////////////
 	/////////// if pathname is not a directory or has other problem, dp = NULL //////////
 	if ((dp = opendir(pathname)) == NULL)
