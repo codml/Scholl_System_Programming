@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
     while (1)
     {
-        connfd = accept(serverfd, (struct sockaddr *) &cliaddr, &clilen);
+        connfd = accept(serverfd, &cliaddr, &clilen);
         if (client_info(&cliaddr) < 0)
             write(2, "client_info() err!!\n", strlen("client_info() err!!\n"));
         while (1)

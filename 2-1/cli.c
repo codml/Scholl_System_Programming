@@ -37,7 +37,7 @@ void main(int argc, char **argv)
 	server_addr.sin_addr.s_addr = inet_addr(argv[1]);
 	server_addr.sin_port = htons(atoi(argv[2]));
 
-	if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+	if (connect(sockfd, &server_addr, sizeof(server_addr)) < 0)
 	{
 		write(2, "can't connect\n", strlen("can't connect\n"));
 		exit(1);
