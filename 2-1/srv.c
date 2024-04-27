@@ -55,23 +55,31 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    listen(serverfd, 5);
+	listen(serverfd, 10);
 
     while (1)
     {
-        connfd = accept(serverfd, &cliaddr, &clilen);
+        connfd = accept(serverfd, (struct sockaddr *)&cliaddr, &clilen);
         if (client_info(&cliaddr) < 0)
             write(2, "client_info() err!!\n", strlen("client_info() err!!\n"));
         while (1)
         {
-            n = read(connfd, buff, MAX_BUFF);
+            if ((n = read(connfd, buff, MAX_BUFF)) < 0)
+			{
+				write(2, "read() err!\n", strlen("read() err!\n"));
+				break;
+			}
             buff[n] = '0';
             if (cmd_process(buff, result_buff) < 0)
             {
                 write(2, "cmd_process() err!\n", strlen("cmd_process() err!\n"));
                 break;
             }
-            write(connfd, result_buff, strlen(result_buff));
+			if (write(connfd, result_buff, strlen(result_buff)) < 0)
+			{
+				write(2, "write() err\n", strlen("write() err\n"));
+				break;
+			}
             if (!strcmp(result_buff, "QUIT"))
             {
                 write(2, "QUIT\n", strlen("QUIT\n"));

@@ -26,7 +26,7 @@ void main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (sockfd = socket(PF_INET, SOCK_STREAM, 0) < 0)
+	if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		write(2, "can't create socket\n", strlen("can't create socket\n"));
 		exit(1);
@@ -37,7 +37,7 @@ void main(int argc, char **argv)
 	server_addr.sin_addr.s_addr = inet_addr(argv[1]);
 	server_addr.sin_port = htons(atoi(argv[2]));
 
-	if (connect(sockfd, &server_addr, sizeof(server_addr)) < 0)
+	if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
 	{
 		write(2, "can't connect\n", strlen("can't connect\n"));
 		exit(1);
@@ -51,12 +51,13 @@ void main(int argc, char **argv)
 			write(2, "read() error\n", strlen("read() error\n"));
 			exit(1);
 		}
+		n = strlen(buff);
+		buff[n - 1] = '\0';
         if (conv_cmd(buff, cmd_buff) < 0)
         {
             write(2, "conv_cmd() error!!\n", strlen("conv_cmd() error!!\n"));
             exit(1);
         }
-        n = strlen(cmd_buff);
         if (write(sockfd, cmd_buff, n) != n)
         {
             write(2, "write() error!!\n", strlen("write() error!!\n"));
