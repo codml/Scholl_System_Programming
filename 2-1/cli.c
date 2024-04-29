@@ -45,17 +45,12 @@ void main(int argc, char **argv)
 		exit(1);
 	}
 
-    while (1)
+	memset(buff, 0, sizeof(buff));
+	memset(cmd_buff, 0, sizeof(cmd_buff));
+	memset(rcv_buff, 0, sizeof(rcv_buff));
+	write(1, "> ", 2);
+    while ((n = read(0, buff, sizeof(buff))) > 0)
     {
-		memset(buff, 0, sizeof(buff));
-		memset(cmd_buff, 0, sizeof(cmd_buff));
-		memset(rcv_buff, 0, sizeof(rcv_buff));
-		write(1, "> ", 2);
-		if ((n = read(0, buff, sizeof(buff))) < 0)
-		{
-			write(2, "read() error\n", strlen("read() error\n"));
-			exit(1);
-		}
 		buff[n] = '\0';
         if (conv_cmd(buff, cmd_buff) < 0)
         {
@@ -65,28 +60,29 @@ void main(int argc, char **argv)
 		n = strlen(cmd_buff);
         if (write(sockfd, cmd_buff, n) != n)
         {
-            write(2, "write() error!!\n", strlen("write() error!!\n"));
-            exit(1);
-        }
-        while ((n = read(sockfd, rcv_buff, RCV_BUFF - 1) > 0))
-        {
-            if (str = strchr(rcv_buff, '\0'))
-				break;
-        }
-		if (n <= 0)
+			write(2, "write() error!!\n", strlen("write() error!!\n"));
+			exit(1);
+		}
+		if ((n = read(sockfd, rcv_buff, RCV_BUFF - 1)) < 0)
 		{
 			write(2, "read() error\n", strlen("read() error\n"));
 			exit(1);
 		}
-        if (!strcmp(rcv_buff, "QUIT"))
-        {
-            write(1, "Program quit!!\n", strlen("Program quit!!\n"));
+		rcv_buff[n] = '\0';
+		if (!strcmp(rcv_buff, "QUIT"))
+		{
+			write(1, "Program quit!!\n", strlen("Program quit!!\n"));
 			close(sockfd);
 			exit(0);
-        }
-
-        process_result(rcv_buff);
+		}
+		process_result(rcv_buff);
+		memset(buff, 0, sizeof(buff));
+		memset(cmd_buff, 0, sizeof(cmd_buff));
+		memset(rcv_buff, 0, sizeof(rcv_buff));
+		write(1, "> ", 2);
+        
     }
+	close(sockfd);
 }
 
 int conv_cmd(char *buff, char *cmd_buff)
@@ -94,7 +90,7 @@ int conv_cmd(char *buff, char *cmd_buff)
 	int		len = 0;
 	char	*split[256];
 
-    for (char *ptr = strtok(buff, " \n"); ptr; ptr = strtok(NULL, " \n"))
+    for (char *ptr = strtok(buff, " \b\v\f\r\t\n"); ptr; ptr = strtok(NULL, " \n"))
 		split[len++] = ptr;
 	split[len] = NULL;
 	if (!strcmp(split[0], "ls"))
@@ -102,7 +98,7 @@ int conv_cmd(char *buff, char *cmd_buff)
 	else if (!strcmp(split[0], "quit") && len == 1)
 		strcpy(cmd_buff, "QUIT");
 	else
-		return -1;
+		strcpy(cmd_buff, split[0]);
 	for (int i = 1; i < len; i++)
 	{
 		strcat(cmd_buff, " ");

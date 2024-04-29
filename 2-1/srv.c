@@ -17,7 +17,7 @@
 #define SEND_BUFF 4096
 
 int		client_info(struct sockaddr_in *cliaddr);
-int		NLST(char *buf, char *result_buf);
+void	NLST(char *buf, char *result_buf);
 void	MtoS(struct stat *infor, const char *pathname, char *print_buf);
 int		cmd_process(char *buff, char *result_buff);
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 
     memset((char *)&srvaddr, 0, sizeof(srvaddr));
 	srvaddr.sin_family = AF_INET;
-	srvaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	srvaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	srvaddr.sin_port = htons(atoi(argv[1]));
 
     if (bind(serverfd, (struct sockaddr *)&srvaddr, sizeof(srvaddr)) < 0)
@@ -58,35 +58,33 @@ int main(int argc, char **argv)
 
     while (1)
     {
+		clilen = sizeof(cliaddr);
         connfd = accept(serverfd, (struct sockaddr *)&cliaddr, &clilen);
         if (client_info(&cliaddr) < 0)
             write(2, "client_info() err!!\n", strlen("client_info() err!!\n"));
-        while (1)
-        {
-			memset(buff, 0, sizeof(buff));
-			memset(result_buff, 0, sizeof(result_buff));
-            while ((n = read(connfd, buff, MAX_BUFF)) > 0)
-			{
-				if (str = strchr(buff, '\0'))
-					break;
-			}
+		memset(buff, 0, sizeof(buff));
+		memset(result_buff, 0, sizeof(result_buff));
+		while ((n = read(connfd, buff, MAX_BUFF)) > 0)
+		{
 			buff[n] = '\0';
-            if (cmd_process(buff, result_buff) < 0)
-            {
-                write(2, "cmd_process() err!\n", strlen("cmd_process() err!\n"));
+			if (cmd_process(buff, result_buff) < 0)
+			{
+				write(2, "cmd_process() err!\n", strlen("cmd_process() err!\n"));
 				break;
-            }
+			}
 			if (write(connfd, result_buff, strlen(result_buff)) < 0)
 			{
 				write(2, "write() err\n", strlen("write() err\n"));
 				break;
 			}
-            if (!strcmp(result_buff, "QUIT"))
-            {
-                write(2, "QUIT\n", strlen("QUIT\n"));
-                break;
-            }
-        }
+			if (!strcmp(result_buff, "QUIT"))
+			{
+				write(2, "QUIT\n", strlen("QUIT\n"));
+				break;
+			}
+			memset(buff, 0, sizeof(buff));
+			memset(result_buff, 0, sizeof(result_buff));
+		}
 		close(connfd);
     }
     close(serverfd);
@@ -185,7 +183,7 @@ void	MtoS(struct stat *infor, const char *pathname, char *print_buf)
 // Purpose: execute NLST command(in cli: ls)                          //
 ////////////////////////////////////////////////////////////////////////
 
-int	NLST(char *buf, char *result_buf)
+void	NLST(char *buf, char *result_buf)
 {
 	char 			c;
 	int				idx;
@@ -201,20 +199,22 @@ int	NLST(char *buf, char *result_buf)
 	DIR				*dp;
 	struct dirent	*dirp;
 	struct stat		infor;
-	opterr = 0;
 
 	char			*split[256];
 	char			*filename[256];
 	char			tmp_buf[MAX_BUFF];
 	char			path_buf[MAX_BUFF];
 	char			print_buf[MAX_BUFF];
+	
 	opterr = 0;
+	optind = 0;
 
 	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
+
 	///////////// option parsing -> if unknown option -> error ///////////
 	while ((c = getopt(len, split, "al")) != -1)
 	{
@@ -227,13 +227,20 @@ int	NLST(char *buf, char *result_buf)
 			lflag++;
 			break;
 		case '?':
-			return -1;
+			errorM = "Error: invalid option\n";
+			strcpy(result_buf, errorM);
+			return;
 		}
 	}
+
 	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
-		return -1;
-		
+	{
+		errorM = "Error: too many arguments\n";
+		strcpy(result_buf, errorM);
+		return;
+	}
+
 	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
 		pathname = ".";
@@ -245,17 +252,29 @@ int	NLST(char *buf, char *result_buf)
 	if ((dp = opendir(pathname)) == NULL)
 	{
 		////// if pathname is not a directory and command has only -l option, not error //////
-		if (errno == ENOTDIR && lflag)
+		if (errno == ENOTDIR && lflag && !aflag)
 		{
 			//////// load file status in struct stat infor ////////
 			if (stat(pathname, &infor) == -1)
-				return -1; /////// error handling when failed to load file status ///////
+			{
+				/////// error handling when failed to load file status ///////
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+				strcpy(result_buf, print_buf);
+				return;
+			}
 			////////// print formatted file status string and exit //////////
-			MtoS(&infor, pathname, result_buf);
-			return 0;
+			MtoS(&infor, pathname, print_buf);
+			strcpy(result_buf, print_buf);
+			return;
 		}
 		///////// if error caused by other problem, print error string and exit ////////
-		return -1;
+		if (errno == EACCES)
+			errorM = "cannot access";
+		else
+			errorM = strerror(errno);
+		snprintf(print_buf, sizeof(print_buf), "Error : %s\n", errorM);
+		strcpy(result_buf, print_buf);
+		return;
 	}
 
 	////////////// if succeed to open directory stream, read directory entries and store in filename[] ///////////
@@ -310,8 +329,11 @@ int	NLST(char *buf, char *result_buf)
 			strcat(path_buf, "/");
 			strcat(path_buf, filename[i]);
 			if (stat(path_buf, &infor) == -1)
-				return -1;
-				
+			{
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+				strcpy(result_buf, print_buf);
+				return;
+			}
 			MtoS(&infor, filename[i], print_buf);
 			strcat(result_buf, print_buf);
 		}
@@ -326,22 +348,26 @@ int	NLST(char *buf, char *result_buf)
 			strcat(path_buf, "/");
 			strcat(path_buf, filename[i]);
 			if (stat(path_buf, &infor) == -1)
-				return -1;
-				
+			{
+				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+				write(2, print_buf, strlen(print_buf));
+				return ;
+			}
 			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
 				strcat(result_buf, "/");
 			strcat(result_buf, "\n");
 		}
 	}
 	closedir(dp);
-	return 0;
 }
 
 int	cmd_process(char *buff, char *result_buff)
 {
 	if (!strcmp(buff, "QUIT"))
 		strcpy(result_buff, buff);
+	else if (!strncmp(buff, "NLST", 4))
+		NLST(buff, result_buff);
 	else
-		return (NLST(buff, result_buff));
+		return -1;
 	return 0;
 }
