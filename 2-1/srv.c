@@ -14,7 +14,7 @@
 #include <grp.h>
 
 #define MAX_BUFF 4096
-#define SEND_BUFF 1024
+#define SEND_BUFF 4096
 
 int		client_info(struct sockaddr_in *cliaddr);
 int		NLST(char *buf, char *result_buf);
@@ -26,6 +26,7 @@ int main(int argc, char **argv)
     struct  sockaddr_in srvaddr, cliaddr;
     int     serverfd, connfd;
 	int		clilen;
+	char	*str;
 
     char    buff[MAX_BUFF], result_buff[SEND_BUFF];
     int     n;
@@ -41,8 +42,6 @@ int main(int argc, char **argv)
         write(2, "Server: Can't open stream socket\n", strlen("Server: Can't open stream socket\n"));
         exit(1);
     }
-
-	memset(result_buff, 0, sizeof(result_buff));
 
     memset((char *)&srvaddr, 0, sizeof(srvaddr));
 	srvaddr.sin_family = AF_INET;
@@ -64,16 +63,18 @@ int main(int argc, char **argv)
             write(2, "client_info() err!!\n", strlen("client_info() err!!\n"));
         while (1)
         {
-            if ((n = read(connfd, buff, MAX_BUFF)) < 0)
+			memset(buff, 0, sizeof(buff));
+			memset(result_buff, 0, sizeof(result_buff));
+            while ((n = read(connfd, buff, MAX_BUFF)) > 0)
 			{
-				write(2, "read() err!\n", strlen("read() err!\n"));
-				break;
+				if (str = strchr(buff, '\0'))
+					break;
 			}
-            buff[n] = '0';
+			buff[n] = '\0';
             if (cmd_process(buff, result_buff) < 0)
             {
                 write(2, "cmd_process() err!\n", strlen("cmd_process() err!\n"));
-                break;
+				break;
             }
 			if (write(connfd, result_buff, strlen(result_buff)) < 0)
 			{
@@ -83,10 +84,10 @@ int main(int argc, char **argv)
             if (!strcmp(result_buff, "QUIT"))
             {
                 write(2, "QUIT\n", strlen("QUIT\n"));
-                close(connfd);
                 break;
             }
         }
+		close(connfd);
     }
     close(serverfd);
 }
@@ -214,7 +215,6 @@ int	NLST(char *buf, char *result_buf)
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
-
 	///////////// option parsing -> if unknown option -> error ///////////
 	while ((c = getopt(len, split, "al")) != -1)
 	{
@@ -230,11 +230,10 @@ int	NLST(char *buf, char *result_buf)
 			return -1;
 		}
 	}
-
 	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
 		return -1;
-
+		
 	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
 		pathname = ".";
@@ -312,6 +311,7 @@ int	NLST(char *buf, char *result_buf)
 			strcat(path_buf, filename[i]);
 			if (stat(path_buf, &infor) == -1)
 				return -1;
+				
 			MtoS(&infor, filename[i], print_buf);
 			strcat(result_buf, print_buf);
 		}
@@ -327,6 +327,7 @@ int	NLST(char *buf, char *result_buf)
 			strcat(path_buf, filename[i]);
 			if (stat(path_buf, &infor) == -1)
 				return -1;
+				
 			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
 				strcat(result_buf, "/");
 			strcat(result_buf, "\n");
