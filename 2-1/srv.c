@@ -1,3 +1,15 @@
+////////////////////////////////////////////////////////////////////////
+// File Name    :srv.c                                                //
+// Date         :2024/04/30                                           //
+// OS           :Ubuntu 20.04.6 LTS 64bits                            //
+// Author       :Kim Tae Wan                                          //
+// Student ID   :2020202034                                           //
+// ------------------------------------------------------------------ //
+// Title        :System Programming Assignment #2-1: socket           //
+// Description  :socket programming - srv: receive FTP commands and   //
+//										   send the result of command //
+////////////////////////////////////////////////////////////////////////
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,7 +26,7 @@
 #include <grp.h>
 
 #define MAX_BUFF 4096
-#define SEND_BUFF 4096
+#define SEND_BUFF 16384
 
 int		client_info(struct sockaddr_in *cliaddr);
 void	NLST(char *buf, char *result_buf);
@@ -31,70 +43,111 @@ int main(int argc, char **argv)
     char    buff[MAX_BUFF], result_buff[SEND_BUFF];
     int     n;
 
+	/////// check # of arguments /////////
     if (argc != 2)
 	{
 		write(2, "Format: ./srv [port num]\n", strlen("Format: ./srv [port num]\n"));
 		exit(1);
 	}
 
+	//////// make socket for server ////////
     if ((serverfd = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
         write(2, "Server: Can't open stream socket\n", strlen("Server: Can't open stream socket\n"));
         exit(1);
     }
 
+	///////// set server address(address family, IPv4 address, port number) /////////
     memset((char *)&srvaddr, 0, sizeof(srvaddr));
 	srvaddr.sin_family = AF_INET;
 	srvaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	srvaddr.sin_port = htons(atoi(argv[1]));
 
+	///////// bind socket and server process /////////
     if (bind(serverfd, (struct sockaddr *)&srvaddr, sizeof(srvaddr)) < 0)
     {
         write(2, "Server: Can't bind local address\n", strlen("Server: Can't bind local address\n"));
         exit(1);
     }
 
+	////// listen client connect, backlog = 10(queue size) //////
 	listen(serverfd, 10);
 
     while (1)
     {
+		//////// accept client's connection & save client infor to cliaddr /////////
 		clilen = sizeof(cliaddr);
         connfd = accept(serverfd, (struct sockaddr *)&cliaddr, &clilen);
+
+		////// print client information(client IPv4 address, port number) ///////
         if (client_info(&cliaddr) < 0)
             write(2, "client_info() err!!\n", strlen("client_info() err!!\n"));
+
+		////// reset buffers //////
 		memset(buff, 0, sizeof(buff));
 		memset(result_buff, 0, sizeof(result_buff));
-		while ((n = read(connfd, buff, MAX_BUFF)) > 0)
+
+		////// repeat until client send QUIT /////
+		while (1)
 		{
+			////// read FTP commands from client /////
+			if ((n = read(connfd, buff, MAX_BUFF)) < 0)
+			{
+				write(2, "read() error\n", strlen("read() error\n"));
+				break;
+			}
 			buff[n] = '\0';
+
+			////// process command received from client /////
 			cmd_process(buff, result_buff);
+
+			///// write result to clien //////
 			if (write(connfd, result_buff, strlen(result_buff)) < 0)
 			{
 				write(2, "write() err\n", strlen("write() err\n"));
 				break;
 			}
+
+			////// if result was QUIT, close user connection //////
 			if (!strcmp(result_buff, "QUIT"))
-			{
-				write(2, "QUIT\n", strlen("QUIT\n"));
 				break;
-			}
+
+			///// reset buffers //////
 			memset(buff, 0, sizeof(buff));
 			memset(result_buff, 0, sizeof(result_buff));
 		}
+		////// close user socket /////
 		close(connfd);
     }
+	//// close server socket ////
     close(serverfd);
 }
+
+////////////////////////////////////////////////////////////////////////
+// clinet_info                                                        //
+// ================================================================== //
+// Input: struct sockaddr_in * -> client address information          //
+//                                                                    //
+//                                                                    //
+//                                                                    //
+// Output: int -> 0:success to write                                  //
+//               -1:failed to write                                   //
+//                                                                    //
+// Purpose: print client IP address & port number                     //
+////////////////////////////////////////////////////////////////////////
 
 int	client_info(struct sockaddr_in *cliaddr)
 {
 	char print_buf[MAX_BUFF];
 	char buf[MAX_BUFF];
 
+	/////// make client information format ////////
 	strcpy(print_buf, "==========Client info==========\n");
 	sprintf(buf, "client IP: %s\n\nclient port: %d\n", inet_ntoa(cliaddr->sin_addr), ntohs(cliaddr->sin_port));
 	strcat(print_buf, buf);
 	strcat(print_buf, "===============================\n");
+
+	/////// print client information ////////
 	if (write(1, print_buf, strlen(print_buf)) < 0)
 		return -1;
 	return 0;
@@ -358,12 +411,37 @@ void	NLST(char *buf, char *result_buf)
 	closedir(dp);
 }
 
+////////////////////////////////////////////////////////////////////////
+// cmd_process                                                        //
+// ================================================================== //
+// Input: char *-> FTP command                                        //
+//        char *-> memory to store command result(or error string)    //
+//                                                                    //
+//                                                                    //
+// Output: none                                                       //
+//                                                                    //
+//                                                                    //
+// Purpose: execute FTP command and store result to result_buff       //
+////////////////////////////////////////////////////////////////////////
+
 void	cmd_process(char *buff, char *result_buff)
 {
+	//////// execute QUIT instruction -> send 'QUIT' to client ///////
 	if (!strcmp(buff, "QUIT"))
 		strcpy(result_buff, buff);
+
+	/////// execute NLST instruction -> send result(or error) to client ///////
 	else if (!strncmp(buff, "NLST", 4))
 		NLST(buff, result_buff);
+
+	////// receive wrong command //////
 	else
+	{
 		strcpy(result_buff, "wrong command\n");
+		write(1, "WRONG COMMAND\n", strlen("WRONG COMMAND\n"));
+		return ;
+	}
+	////// print command to server /////
+	write(1, buff, strlen(buff));
+	write(1, "\n", 1);
 }
