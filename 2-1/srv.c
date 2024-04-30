@@ -331,7 +331,8 @@ void	NLST(char *buf, char *result_buf)
 				return;
 			}
 			MtoS(&infor, filename[i], print_buf);
-			strcat(result_buf, print_buf);
+			if (strlen(result_buf) + strlen(print_buf) < SEND_BUFF)
+				strcat(result_buf, print_buf);
 		}
 	}
 	else ////// if no '-l' option, just print file names //////
