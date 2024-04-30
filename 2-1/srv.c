@@ -19,7 +19,7 @@
 int		client_info(struct sockaddr_in *cliaddr);
 void	NLST(char *buf, char *result_buf);
 void	MtoS(struct stat *infor, const char *pathname, char *print_buf);
-int		cmd_process(char *buff, char *result_buff);
+void	cmd_process(char *buff, char *result_buff);
 
 int main(int argc, char **argv)
 {
@@ -67,11 +67,7 @@ int main(int argc, char **argv)
 		while ((n = read(connfd, buff, MAX_BUFF)) > 0)
 		{
 			buff[n] = '\0';
-			if (cmd_process(buff, result_buff) < 0)
-			{
-				write(2, "cmd_process() err!\n", strlen("cmd_process() err!\n"));
-				break;
-			}
+			cmd_process(buff, result_buff);
 			if (write(connfd, result_buff, strlen(result_buff)) < 0)
 			{
 				write(2, "write() err\n", strlen("write() err\n"));
@@ -361,13 +357,12 @@ void	NLST(char *buf, char *result_buf)
 	closedir(dp);
 }
 
-int	cmd_process(char *buff, char *result_buff)
+void	cmd_process(char *buff, char *result_buff)
 {
 	if (!strcmp(buff, "QUIT"))
 		strcpy(result_buff, buff);
 	else if (!strncmp(buff, "NLST", 4))
 		NLST(buff, result_buff);
 	else
-		return -1;
-	return 0;
+		strcpy(result_buff, "wrong command\n");
 }
