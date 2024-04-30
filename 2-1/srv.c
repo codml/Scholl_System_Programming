@@ -248,7 +248,7 @@ void	NLST(char *buf, char *result_buf)
 	if ((dp = opendir(pathname)) == NULL)
 	{
 		////// if pathname is not a directory and command has only -l option, not error //////
-		if (errno == ENOTDIR && lflag && !aflag)
+		if (errno == ENOTDIR && lflag)
 		{
 			//////// load file status in struct stat infor ////////
 			if (stat(pathname, &infor) == -1)
