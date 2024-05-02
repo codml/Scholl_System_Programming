@@ -1,3 +1,15 @@
+////////////////////////////////////////////////////////////////////////
+// File Name    :srv.c                                                //
+// Date         :2024/05/04                                           //
+// OS           :Ubuntu 20.04.6 LTS 64bits                            //
+// Author       :Kim Tae Wan                                          //
+// Student ID   :2020202034                                           //
+// ------------------------------------------------------------------ //
+// Title        :System Programming Assignment #2-2: fork()           //
+// Description  :server with fork(): parent -> wait client access     //
+//                                   child -> write back client msg   //
+////////////////////////////////////////////////////////////////////////
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,10 +23,9 @@
 
 #define BUF_SIZE 256
 
-void sh_chld(int sig);
-void sh_alrm(int sig);
-
-int		client_info(struct sockaddr_in *cliaddr);
+void    sh_chld(int sig);
+void    sh_alrm(int sig);
+int     client_info(struct sockaddr_in *cliaddr);
 
 int main(int argc, char **argv)
 {
@@ -25,6 +36,7 @@ int main(int argc, char **argv)
     int len;
     int port;
 
+    //// 
     signal(SIGCHLD, sh_chld);
     signal(SIGALRM, sh_alrm);
 
@@ -71,12 +83,22 @@ int main(int argc, char **argv)
                     write(client_fd, buff, BUF_SIZE);
                 }
             }
-			alarm(1);
-			close(client_fd);
+            alarm(1);
         }
+        close(client_fd);
     }
     return 0;
 }
+
+////////////////////////////////////////////////////////////////////////
+// sh_chld                                                            //
+// ================================================================== //
+// Input: int -> signal                                               //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: called when SIGCHLD occured                               //
+////////////////////////////////////////////////////////////////////////
 
 void sh_chld(int sig)
 {
@@ -84,10 +106,19 @@ void sh_chld(int sig)
     wait(NULL);
 }
 
+////////////////////////////////////////////////////////////////////////
+// sh_alrm                                                            //
+// ================================================================== //
+// Input: int -> sig                                                  //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: called when SIGALRM occured                               //
+////////////////////////////////////////////////////////////////////////
+
 void sh_alrm(int sig)
 {
     printf("Child Process(PID : %d) will be terminated.\n", getpid());
-	printf("no\n");
     exit(1);
 }
 
