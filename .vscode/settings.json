@@ -3,6 +3,7 @@
     "files.associations": {
         "dirent.h": "c",
         "types.h": "c",
-        "socket.h": "c"
+        "socket.h": "c",
+        "stdio.h": "c"
     }
 }
