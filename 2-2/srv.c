@@ -65,15 +65,14 @@ int main(int argc, char **argv)
                 {
                     ////// if received buff was QUIT, close user connection //////
                     if (!strncmp(buff, "QUIT\n", 5))
-                    {
-                        close(client_fd);
-                        alarm(10);
-                    }
+						break;
                         
                     ///// write received message to client //////
                     write(client_fd, buff, BUF_SIZE);
                 }
             }
+			alarm(1);
+			close(client_fd);
         }
     }
     return 0;
@@ -87,7 +86,8 @@ void sh_chld(int sig)
 
 void sh_alrm(int sig)
 {
-    printf("Child Process(PIO : %d) will be terminated.\n", getpid());
+    printf("Child Process(PID : %d) will be terminated.\n", getpid());
+	printf("no\n");
     exit(1);
 }
 
