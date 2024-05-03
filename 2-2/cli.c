@@ -29,6 +29,7 @@ int main(int argc, char **argv)
 	int sockfd;
 	struct sockaddr_in serv_addr;
 
+	///// check the number of arguments /////
 	if (argc != 3)
     {
         write(2, "Two arguments are needed: IP, port\n", strlen("Two arguments are needed: IP, port\n"));
