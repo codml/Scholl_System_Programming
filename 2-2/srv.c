@@ -85,14 +85,13 @@ int main(int argc, char **argv)
                 {
                     ////// if received buff was QUIT, close user connection //////
                     if (!strncmp(buff, "QUIT\n", 5))
-						break;
-                        
+						kill(getpid(), SIGALRM);
+                    /////// when child process ends, call SIGALRM by raise() ///////
+
                     ///// write received message to client //////
                     write(client_fd, buff, BUF_SIZE);
                 }
             }
-            /////// when child process ends, call SIGALRM by alarm() ///////
-            alarm(1);
         }
         ////// close connection with client in parent process //////
         close(client_fd);
