@@ -50,20 +50,25 @@ int main(int argc, char **argv)
 		///// reset buffer to avoid overwriting problem /////
 		memset(buff, 0, BUF_SIZE);
 
-		///// 
+		///// write string which client will send to server /////
 		write(STDOUT_FILENO, "> ", 2);
 		read(STDIN_FILENO, buff, BUF_SIZE);
 
+		////// write string to server //////
 		if (write(sockfd, buff, BUF_SIZE) > 0)
 		{
+			//// if success to write, read from server /////
 			if (read(sockfd, buff, BUF_SIZE) > 0)
 				printf("from server:%s", buff);
+			//// if disconnect from server process, read will return 
 			else
 				break;
 		}
 		else
 			break;
 	}
+
+	///// close socket connected with server /////
 	close(sockfd);
 	return 0;
 }
