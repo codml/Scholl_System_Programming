@@ -29,6 +29,12 @@ int main(int argc, char **argv)
 	int sockfd;
 	struct sockaddr_in serv_addr;
 
+	if (argc != 3)
+    {
+        write(2, "Two arguments are needed: IP, port\n", strlen("Two arguments are needed: IP, port\n"));
+        exit(1);
+    }
+
 	////// make socket: domain: IPv4, type: stream(TCP) //////
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 

@@ -36,6 +36,11 @@ int main(int argc, char **argv)
     int len;
     int port;
 
+    if (argc != 2)
+    {
+        write(2, "One argument is needed: port\n", strlen("one argument is needed: port\n"));
+        exit(1);
+    }
     //// register functions which is called when signal occurred //////
     signal(SIGCHLD, sh_chld);
     signal(SIGALRM, sh_alrm);
