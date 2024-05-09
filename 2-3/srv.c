@@ -20,6 +20,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <time.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#include <grp.h>
+#include <errno.h>
 
 #define MAX_BUF 4096
 #define BUF_SIZE 4096
@@ -130,7 +135,7 @@ int main(int argc, char **argv)
 					else if (!strncmp(buff, "QUIT", 4))
 						QUIT(buff, send_buff);
 					else
-						strcpy(send_buff, "unknown command\n", strlen("unknown command\n"));
+						strcpy(send_buff, "unknown command\n");
                 }
 				if (!strcmp(send_buff, "QUIT"))
 					break;
@@ -161,7 +166,7 @@ int main(int argc, char **argv)
 
 void sh_chld(int sig)
 {
-	char	buf[BUF_SIZE];
+	char	buff[BUF_SIZE];
 
 	///// when SIGCHLD occurred, this function is called /////
 	sprintf(buff, "Client (%5d)'s Release\n", wait(NULL));
@@ -180,11 +185,7 @@ void sh_chld(int sig)
 
 void sh_alrm(int sig)
 {
-    ///// when SIGALRM occurred, this function is called /////
-    printf("Child Process(PID : %d) will be terminated.\n", getpid());
 
-    ///// terminate child process //////
-    exit(1);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -199,7 +200,7 @@ void sh_alrm(int sig)
 
 void sh_int(int sig)
 {
-
+	exit(0);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -286,15 +287,15 @@ void	MtoS(struct stat *infor, const char *pathname, char *print_buf)
 	////// if the infor's file is directory, append '/' next to the file name //////
 	if (S_ISDIR(infor->st_mode))
 	{
-		////// write formatted file informantion string to buf using snprintf() ////// 
-		snprintf(print_buf, MAX_BUF, "%s %2ld %s %s %6ld %s %s/\n",
+		////// write formatted file informantion string to buf using sprintf() ////// 
+		sprintf(print_buf, "%s %2ld %s %s %6ld %s %s/\n",
 			str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
 			getgrgid(infor->st_gid)->gr_name, infor->st_size,
 			time_buf, pathname);
 	}
 	else
 	{
-		snprintf(print_buf, MAX_BUF, "%s %2ld %s %s %6ld %s %s\n",
+		sprintf(print_buf, "%s %2ld %s %s %6ld %s %s\n",
 			str, infor->st_nlink, getpwuid(infor->st_uid)->pw_name,
 			getgrgid(infor->st_gid)->gr_name, infor->st_size,
 			time_buf, pathname);
@@ -575,14 +576,14 @@ void	LIST(char *buf, char *print_buf)
 					errorM = "No such file or directory";
 				else
 					errorM = strerror(errno);
-				snprintf(print_buf, sizeof(print_buf), "Error : %s\n", errorM);
+				sprintf(print_buf, "Error : %s\n", errorM);
 				return ;
 			}
 			MtoS(&infor, pathname, print_buf);
 			return ;
 		}
 		///////// if error caused by other problem, print error string and exit ////////
-		snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
+		sprintf(print_buf, "Error : %s\n", strerror(errno));
 		return ;
 	}
 
@@ -617,9 +618,8 @@ void	LIST(char *buf, char *print_buf)
 		strcat(path_buf, filename[i]);
 		if (stat(path_buf, &infor) == -1)
 		{
-			snprintf(print_buf, sizeof(print_buf), "Error : %s\n", strerror(errno));
-			write(2, print_buf, strlen(print_buf));
-			exit(1);
+			sprintf(print_buf, "Error : %s\n", strerror(errno));
+			return ;
 		}
 		MtoS(&infor, filename[i], line_buf);
 		strcat(print_buf, line_buf);
@@ -680,7 +680,7 @@ void	PWD(char *buf, char *print_buf)
 	getcwd(path_buf, sizeof(path_buf));
 
 	//////////// print current working directory ////////////
-	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
+	sprintf(print_buf, "\"%s\" is current directory\n", path_buf);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -746,7 +746,7 @@ void	CWD(char *buf, char *print_buf)
 			errorM = "directory not found";
 		else
 			errorM = strerror(errno);
-		snprintf(print_buf, MAX_BUF, "Error: %s\n", errorM);
+		sprintf(print_buf, "Error: %s\n", errorM);
 		return ;
 	}
 	
@@ -754,7 +754,7 @@ void	CWD(char *buf, char *print_buf)
 	getcwd(path_buf, sizeof(path_buf));
 
 	///////// print current working directory //////////
-	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
+	sprintf(print_buf, "\"%s\" is current directory\n", path_buf);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -811,7 +811,7 @@ void	CDUP(char *buf, char *print_buf)
 			errorM = "directory not found";
 		else
 			errorM = strerror(errno);
-		snprintf(print_buf, MAX_BUF, "Error: %s\n", errorM);
+		sprintf(print_buf, "Error: %s\n", errorM);
 		return ;
 	}
 	
@@ -819,7 +819,7 @@ void	CDUP(char *buf, char *print_buf)
 	getcwd(path_buf, sizeof(path_buf));
 	
 	///////// print current working directory //////////
-	snprintf(print_buf, MAX_BUF, "\"%s\" is current directory\n", path_buf);
+	sprintf(print_buf, "\"%s\" is current directory\n", path_buf);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -881,7 +881,7 @@ void	MKD(char *buf, char *print_buf)
 				errorM = "File exists";
 			else
 				errorM = strerror(errno);
-			snprintf(line_buf, MAX_BUF, "Error: cannot create directory \'%s\': %s\n", split[i], errorM);
+			sprintf(line_buf, "Error: cannot create directory \'%s\': %s\n", split[i], errorM);
 			strcat(print_buf, line_buf);
 		}
 		else
@@ -948,13 +948,13 @@ void	DELE(char *buf, char *print_buf)
 		if (unlink(split[i]) == -1)
 		{
 			////// if failed to remove, print error message //////
-			snprintf(line_buf, MAX_BUF, "Error: failed to delete \'%s\'\n", split[i]);
+			sprintf(line_buf, "Error: failed to delete \'%s\'\n", split[i]);
 			strcat(print_buf, line_buf);
 		}
 		else
 		{
 			/////// print result ////////
-			snprintf(line_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
+			sprintf(line_buf, "%s %s\n", split[0], split[i]);
 			strcat(print_buf, line_buf);
 		}
 	}
@@ -1014,13 +1014,13 @@ void	RMD(char *buf, char *print_buf)
 		/////// rmdir() -> remove empty direcoty. if failed -> print error ///////
 		if (rmdir(split[i]) == -1)
 		{
-			snprintf(line_buf, MAX_BUF, "Error: failed to remove \'%s\'\n", split[i]);
+			sprintf(line_buf, "Error: failed to remove \'%s\'\n", split[i]);
 			strcat(print_buf, line_buf);
 		}
 		else
 		{
 			//////// print result /////////
-			snprintf(line_buf, MAX_BUF, "%s %s\n", split[0], split[i]);
+			sprintf(line_buf, "%s %s\n", split[0], split[i]);
 			strcat(print_buf, line_buf);
 		}
 	}
@@ -1085,13 +1085,13 @@ void	RN(char *buf, char *print_buf)
 	////// if failed to rename, print error and exit //////
 	if (rename(split[1], split[3]) == -1)
 	{
-		snprintf(print_buf, MAX_BUF, "Error: %s\n", strerror(errno));
+		sprintf(print_buf, "Error: %s\n", strerror(errno));
 		strcat(print_buf, errorM);
 		return ;
 	}
 
 	////// print result //////
-	snprintf(print_buf, MAX_BUF, "%s %s\n%s %s\n", split[0], split[1], split[2], split[3]);
+	sprintf(print_buf, "%s %s\n%s %s\n", split[0], split[1], split[2], split[3]);
 }
 
 ////////////////////////////////////////////////////////////////////////
