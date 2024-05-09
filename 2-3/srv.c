@@ -30,7 +30,7 @@
 #define BUF_SIZE 4096
 #define PID 0
 #define PORT 1
-#define TIME 2
+#define START_TIME 2
 
 void    sh_chld(int sig);
 void    sh_alrm(int sig);
@@ -49,6 +49,11 @@ void	RN(char *buf, char *print_buf);
 void	QUIT(char *buf, char *print_buf);
 
 int     client_info(struct sockaddr_in *cliaddr);
+
+int		process[BUF_SIZE][3];
+int		process_start = 0;
+int		process_end = 0;
+int		process_cnt = 0;
 
 int main(int argc, char **argv)
 {
@@ -96,8 +101,6 @@ int main(int argc, char **argv)
         if (client_info(&client_addr) < 0)
                 write(2, "client_info() err!!\n", strlen("client_info() err!!\n"));
 
-        ///// alarm!!!!! /////
-
         ////// fork: make child process (+if error, exit program) //////
         if ((pid = fork()) < 0)
         {
@@ -130,7 +133,7 @@ int main(int argc, char **argv)
 						DELE(buff, send_buff);
 					else if (!strncmp(buff, "RMD", 3))
 						RMD(buff, send_buff);
-					else if (!strncmp(buff, "RNFO", 4))
+					else if (!strncmp(buff, "RNFR", 4))
 						RN(buff, send_buff);
 					else if (!strncmp(buff, "QUIT", 4))
 						QUIT(buff, send_buff);
@@ -142,11 +145,21 @@ int main(int argc, char **argv)
 				write(client_fd, send_buff, strlen(send_buff));
             }
             close(client_fd);
+			sprintf(buff, "Client (%5d)'s Release\n\n", getpid());
+			write(STDOUT_FILENO, buff, strlen(buff));
             exit(0);
         }
         else
         {
             ////// close connection with client in parent process //////
+			process_cnt++;
+			if (process_end < BUF_SIZE)
+			{
+				process[process_end][PID] = pid;
+				process[process_end][PORT] = ntohs(client_addr.sin_port);
+				process[process_end][START_TIME] = time(NULL);
+				process_end++;
+			}
             close(client_fd);
 			alarm(1);
         }
@@ -167,10 +180,27 @@ int main(int argc, char **argv)
 void sh_chld(int sig)
 {
 	char	buff[BUF_SIZE];
+	pid_t	pid;
 
 	///// when SIGCHLD occurred, this function is called /////
-	sprintf(buff, "Client (%5d)'s Release\n", wait(NULL));
-    write(STDOUT_FILENO, buff, strlen(buff));
+	pid = wait(NULL);
+	process_cnt--;
+	for (int i = process_start; i < process_end; i++)
+	{
+		if (process[i][PID] == pid)
+		{
+			process[i][PID] = 0;
+			if (i == process_start)
+			{
+				process_start++;
+				if (process_start == process_end)
+					process_start = process_end = 0;
+			}
+			else if (i == process_end - 1)
+				process_end--;
+			break;
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -185,7 +215,25 @@ void sh_chld(int sig)
 
 void sh_alrm(int sig)
 {
+	char	buf[BUF_SIZE];
 
+	alarm(0);
+	if (process_cnt == 0)
+		return ;
+
+	sprintf(buf, "Current Number of Client : %4d\n", process_cnt);
+	write(STDOUT_FILENO, buf, strlen(buf));
+	sprintf(buf, "%5s\t%5s\t%4s\n", "PID", "PORT", "TIME");
+	write(STDOUT_FILENO, buf, strlen(buf));
+	for (int i = process_start; i < process_end; i++)
+	{
+		if (process[i][PID] == 0)
+			continue;
+		
+		sprintf(buf, "%5d\t%5d\t%4ld\n", process[i][PID], process[i][PORT], time(NULL) - process[i][START_TIME]);
+		write(STDOUT_FILENO, buf, strlen(buf));
+	}
+	alarm(10);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -200,6 +248,7 @@ void sh_alrm(int sig)
 
 void sh_int(int sig)
 {
+	while (wait(NULL) != -1);
 	exit(0);
 }
 
@@ -328,7 +377,6 @@ void	NLST(char *buf, char *print_buf)
 	DIR				*dp;
 	struct dirent	*dirp;
 	struct stat		infor;
-	opterr = 0;
 
 	char			*split[256];
 	char			*filename[256];
@@ -343,6 +391,11 @@ void	NLST(char *buf, char *print_buf)
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
+
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
 
 	///////////// option parsing -> if unknown option -> error ///////////
 	while ((c = getopt(len, split, "al")) != -1)
@@ -361,7 +414,6 @@ void	NLST(char *buf, char *print_buf)
 			return ;
 		}
 	}
-
 	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
 	{
@@ -370,14 +422,11 @@ void	NLST(char *buf, char *print_buf)
 		return ;
 	}
 
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
-
 	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
 		pathname = ".";
+	else if (!strcmp(split[optind], "~"))
+		pathname = getenv("HOME");
 	else
 		pathname = split[optind];
 	////////////////////// open directory stream by pathname ////////////////////////////
@@ -535,6 +584,11 @@ void	LIST(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
@@ -551,14 +605,11 @@ void	LIST(char *buf, char *print_buf)
 		return ;
 	}
 
-	///////// print command name //////////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
-
 	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
 		pathname = ".";
+	else if (!strcmp(split[optind], "~"))
+		pathname = getenv("HOME");
 	else
 		pathname = split[optind];
 	
@@ -622,7 +673,8 @@ void	LIST(char *buf, char *print_buf)
 			return ;
 		}
 		MtoS(&infor, filename[i], line_buf);
-		strcat(print_buf, line_buf);
+		if (strlen(line_buf) + strlen(print_buf) < BUF_SIZE)
+			strcat(print_buf, line_buf);
 	}
 	closedir(dp);
 }
@@ -655,6 +707,11 @@ void	PWD(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
@@ -670,11 +727,6 @@ void	PWD(char *buf, char *print_buf)
 		strcat(print_buf, errorM);
 		return ;
 	}
-
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
 
 	//////////// get current working directory in path_buf ///////////
 	getcwd(path_buf, sizeof(path_buf));
@@ -698,6 +750,7 @@ void	CWD(char *buf, char *print_buf)
 	int		len = 0;
 	char	*errorM;
 
+	char	*pathname;
 	char	*split[256];
 	char	path_buf[257];
 	char	tmp_buf[MAX_BUF];
@@ -709,6 +762,11 @@ void	CWD(char *buf, char *print_buf)
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
+
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
 
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
@@ -734,13 +792,14 @@ void	CWD(char *buf, char *print_buf)
 		return ;
 	}
 
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
+	///// change '~' to home directory /////
+	if (!strcmp(split[1], "~"))
+		pathname = getenv("HOME");
+	else
+		pathname = split[1];
 
 	///////////// change working directory to argv[1]. if failed, print error and exit //////////////
-	if (chdir(split[1])< 0)
+	if (chdir(pathname)< 0)
 	{
 		if (errno == ENOENT)
 			errorM = "directory not found";
@@ -783,6 +842,11 @@ void	CDUP(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
@@ -798,11 +862,6 @@ void	CDUP(char *buf, char *print_buf)
 		strcat(print_buf, errorM);
 		return ;
 	}
-
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
 
 	////////////// change directory to parent directory. if failed, print error message ///////////////
 	if (chdir("..")< 0)
@@ -849,6 +908,11 @@ void	MKD(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
@@ -864,11 +928,6 @@ void	MKD(char *buf, char *print_buf)
 		strcat(print_buf, errorM);
 		return ;
 	}
-
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
 
 	/////////// try to make directory by arguments(file_name)
 	for (int i = optind; i < len; i++)
@@ -920,6 +979,11 @@ void	DELE(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
@@ -935,11 +999,6 @@ void	DELE(char *buf, char *print_buf)
 		strcat(print_buf, errorM);
 		return ;
 	}
-
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
 
 	/////////// remove each files that correspond with the arguments ///////////
 	for (int i = optind; i < len; i++)
@@ -987,6 +1046,11 @@ void	RMD(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
 	{
@@ -1002,11 +1066,6 @@ void	RMD(char *buf, char *print_buf)
 		strcat(print_buf, errorM);
 		return ;
 	}
-
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
 
 	//////////// remove empty directories that correspond with the arguments //////////
 	for (int i = optind; i < len; i++)
@@ -1047,6 +1106,11 @@ void	RN(char *buf, char *print_buf)
 	optind = 0;
 	opterr = 0;
 
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
+
 	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
@@ -1068,11 +1132,6 @@ void	RN(char *buf, char *print_buf)
 		strcat(print_buf, errorM);
 		return ;
 	}
-
-	/////////// print command //////
-	sprintf(print_buf, "%s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
 
 	////// if file exist, stat() will return 0  -> rename error //////
 	if (!stat(split[3], &infor))

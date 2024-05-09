@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     char buff[BUF_SIZE], write_buff[BUF_SIZE], rcv_buff[BUF_SIZE];
 	char *split[256];
 	int n;
-	int len = 0;
+	int len;
 	struct sockaddr_in serv_addr;
 
 	// instruction convert table, except rename //
@@ -77,6 +77,8 @@ int main(int argc, char **argv)
 		memset(write_buff, 0, BUF_SIZE);
 		memset(rcv_buff, 0, BUF_SIZE);
 
+		len = 0;
+
 		///// write string which client will send to server /////
 		write(STDOUT_FILENO, "> ", 2);
 		if ((n = read(STDIN_FILENO, buff, BUF_SIZE)) < 0)
@@ -93,7 +95,7 @@ int main(int argc, char **argv)
 		///////// change usr cmd to ftp cmd(except rename) //////
 		for (int i = 0; i < 8; i++)
 		{
-			if (!strcmp(split[0], table[i][0]))
+			if (len != 0 && !strcmp(split[0], table[i][0]))
 			{
 				strcat(write_buff, table[i][1]);
 				break;
@@ -101,7 +103,7 @@ int main(int argc, char **argv)
 		}
 
 		/////// for rename ///////
-		if (!strcmp(split[0], "rename"))
+		if (len != 0 && !strcmp(split[0], "rename"))
 		{
 			strcat(write_buff, "RNFR");
 			/////// give all option && argument to RNFR except last argument ///////
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
 			for (int i = 1; i < len; i++)
 			{
 				////// cd .. -> not CWD, CDUP //////
-				if (!strcmp(split[0], "cd") && !strcmp(split[i], ".."))
+				if (!strncmp(write_buff, "CWD", 3) && !strcmp(split[i], ".."))
 				{
 					memmove(write_buff + 1, write_buff, strlen(write_buff));
 					strncpy(write_buff, "CDUP", strlen("CDUP"));
@@ -136,7 +138,7 @@ int main(int argc, char **argv)
 		}
 		
 		////// write string to server //////
-		if (write(sockfd, write_buff, BUF_SIZE) > 0)
+		if (write(sockfd, write_buff, strlen(write_buff)) > 0)
 		{
 			///// write QUIT -> exit /////
 			if (!strcmp(write_buff, "QUIT"))
