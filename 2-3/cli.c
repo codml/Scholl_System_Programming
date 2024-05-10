@@ -5,8 +5,8 @@
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
 // ------------------------------------------------------------------ //
-// Title        :System Programming Assignment #2-3:                  //
-// Description  :                                                     //
+// Title        :System Programming Assignment #2-3: ftp & socket -cli//
+// Description  :convert usr command to FTP command, send it          //
 ////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -52,6 +52,7 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+	///// register handling function for signal interrupt /////
 	signal(SIGINT, sh_int);
 
 	////// make socket: domain: IPv4, type: stream(TCP) //////
@@ -77,6 +78,7 @@ int main(int argc, char **argv)
 		memset(write_buff, 0, BUF_SIZE);
 		memset(rcv_buff, 0, BUF_SIZE);
 
+		//// reset the number of split ////
 		len = 0;
 
 		///// write string which client will send to server /////
@@ -161,6 +163,7 @@ int main(int argc, char **argv)
 
 void sh_int(int sig)
 {
+	///// if receive ctrl+C, send "QUIT" to server and quit /////
 	write(sockfd, "QUIT", 4);
 	close(sockfd);
 	exit(0);

@@ -5,8 +5,8 @@
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
 // ------------------------------------------------------------------ //
-// Title        :System Programming Assignment #2-3:                  //
-// Description  :                                                     //
+// Title        :System Programming Assignment #2-3: ftp & socket -srv//
+// Description  :execute FTP command and send result to client        //
 ////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -111,10 +111,14 @@ int main(int argc, char **argv)
         /////// pid == 0 -> child process: read from client and write the same to client //////
         if (pid == 0)
         {
+			close(server_fd);
             while (1)
             {
+				///// reset buf /////
                 memset(buff, 0, BUF_SIZE);
 				memset(send_buff, 0, BUF_SIZE);
+
+				///// read FTP command and execute /////
                 if ((n = read(client_fd, buff, BUF_SIZE) > 0))
                 {
                     if (!strncmp(buff, "NLST", 4))
@@ -140,6 +144,7 @@ int main(int argc, char **argv)
 					else
 						strcpy(send_buff, "unknown command\n");
                 }
+				//// if received QUIT, quit child server ////
 				if (!strcmp(send_buff, "QUIT"))
 					break;
 				write(client_fd, send_buff, strlen(send_buff));
@@ -445,6 +450,11 @@ void	NLST(char *buf, char *print_buf)
 			}
 			////////// print formatted file status string and exit //////////
 			MtoS(&infor, pathname, print_buf);
+			return ;
+		}
+		else if (errno == ENOTDIR)
+		{
+			sprintf(print_buf, "%s\n", pathname);
 			return ;
 		}
 		///////// if error caused by other problem, print error string and exit ////////
