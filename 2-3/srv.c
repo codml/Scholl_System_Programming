@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 // File Name    :srv.c                                                //
-// Date         :2024/05/                                             //
+// Date         :2024/05/15                                           //
 // OS           :Ubuntu 20.04.6 LTS 64bits                            //
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
@@ -149,6 +149,7 @@ int main(int argc, char **argv)
 					break;
 				write(client_fd, send_buff, strlen(send_buff));
             }
+			///// quit client connection and print termination /////
             close(client_fd);
 			sprintf(buff, "Client (%5d)'s Release\n\n", getpid());
 			write(STDOUT_FILENO, buff, strlen(buff));
@@ -157,7 +158,9 @@ int main(int argc, char **argv)
         else
         {
             ////// close connection with client in parent process //////
+			////// process count //////
 			process_cnt++;
+			///// if empty spaces exist in process[][], insert values /////
 			if (process_end < BUF_SIZE)
 			{
 				process[process_end][PID] = pid;
@@ -188,21 +191,22 @@ void sh_chld(int sig)
 	pid_t	pid;
 
 	///// when SIGCHLD occurred, this function is called /////
-	pid = wait(NULL);
-	process_cnt--;
+	if ((pid = waitpid(-1, NULL, WNOHANG)) <= 0)
+		return ; ///// no child terminated /////
+
+	process_cnt--; // update process count //
+	//// delete terminated process in the process table /////
 	for (int i = process_start; i < process_end; i++)
 	{
 		if (process[i][PID] == pid)
 		{
-			process[i][PID] = 0;
+			process[i][PID] = 0; // delete the process
 			if (i == process_start)
-			{
 				process_start++;
-				if (process_start == process_end)
-					process_start = process_end = 0;
-			}
 			else if (i == process_end - 1)
 				process_end--;
+			if (process_start == process_end) // if process table is empty //
+					process_start = process_end = 0;
 			break;
 		}
 	}
@@ -223,22 +227,25 @@ void sh_alrm(int sig)
 	char	buf[BUF_SIZE];
 
 	alarm(0);
-	if (process_cnt == 0)
-		return ;
 
-	sprintf(buf, "Current Number of Client : %4d\n", process_cnt);
+	sprintf(buf, "Current Number of Client : %4d\n", process_cnt); // print the number of child process
 	write(STDOUT_FILENO, buf, strlen(buf));
+	if (process_cnt == 0) // if no process, break
+	{
+		alarm(10);
+		return ;
+	}
 	sprintf(buf, "%5s\t%5s\t%4s\n", "PID", "PORT", "TIME");
-	write(STDOUT_FILENO, buf, strlen(buf));
+	write(STDOUT_FILENO, buf, strlen(buf)); // print format
 	for (int i = process_start; i < process_end; i++)
 	{
-		if (process[i][PID] == 0)
+		if (process[i][PID] == 0) // PID == 0 -> deleted process's information
 			continue;
 		
 		sprintf(buf, "%5d\t%5d\t%4ld\n", process[i][PID], process[i][PORT], time(NULL) - process[i][START_TIME]);
-		write(STDOUT_FILENO, buf, strlen(buf));
+		write(STDOUT_FILENO, buf, strlen(buf)); // write the information of process
 	}
-	alarm(10);
+	alarm(10); // if no input process, recall this function after 10 seconds
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -253,7 +260,7 @@ void sh_alrm(int sig)
 
 void sh_int(int sig)
 {
-	while (wait(NULL) != -1);
+	while (wait(NULL) != -1); // if all of child terminated, parent terminate
 	exit(0);
 }
 
@@ -375,7 +382,6 @@ void	NLST(char *buf, char *print_buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
-	char			*pathname;
 	char			*errorM;
 	char			*tmp;
 
@@ -385,6 +391,7 @@ void	NLST(char *buf, char *print_buf)
 
 	char			*split[256];
 	char			*filename[256];
+	char			pathname[256];
 	char			tmp_buf[MAX_BUF];
 	char			path_buf[MAX_BUF];
 	char			line_buf[MAX_BUF];
@@ -427,13 +434,19 @@ void	NLST(char *buf, char *print_buf)
 		return ;
 	}
 
+	memset(pathname, 0, 256);
+
 	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
-		pathname = ".";
-	else if (!strcmp(split[optind], "~"))
-		pathname = getenv("HOME");
+		strcpy(pathname, ".");
+	else if (split[optind][0] == '~')
+	{
+		strcpy(pathname, getenv("HOME"));
+		if (strlen(split[optind]) > 1)
+			strcat(pathname, split[optind] + 1);
+	}
 	else
-		pathname = split[optind];
+		strcpy(pathname, split[optind]);
 	////////////////////// open directory stream by pathname ////////////////////////////
 	/////////// if pathname is not a directory or has other problem, dp = NULL //////////
 	if ((dp = opendir(pathname)) == NULL)
@@ -551,7 +564,6 @@ void	LIST(char *buf, char *print_buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
-	char			*pathname;
 	char			*errorM;
 	char			*tmp;
 
@@ -563,6 +575,7 @@ void	LIST(char *buf, char *print_buf)
 	char			*split[256];
 	char			*filename[256];
 
+	char			pathname[256];
 	char			tmp_buf[MAX_BUF];
 	char			path_buf[MAX_BUF];
 	char			line_buf[MAX_BUF];
@@ -596,13 +609,19 @@ void	LIST(char *buf, char *print_buf)
 		return ;
 	}
 
+	memset(pathname, 0, 256);
+
 	/////////// set pathname, if argument is none, '.'(current dir) is pathname ////////////
 	if (optind == len)
-		pathname = ".";
-	else if (!strcmp(split[optind], "~"))
-		pathname = getenv("HOME");
+		strcpy(pathname, ".");
+	else if (split[optind][0] == '~')
+	{
+		strcpy(pathname, getenv("HOME"));
+		if (strlen(split[optind]) > 1)
+			strcat(pathname, split[optind] + 1);
+	}
 	else
-		pathname = split[optind];
+		strcpy(pathname, split[optind]);
 	
 	////////////////////// open directory stream by pathname ////////////////////////////
 	if ((dp = opendir(pathname)) == NULL)
@@ -724,7 +743,7 @@ void	CWD(char *buf, char *print_buf)
 	int		len = 0;
 	char	*errorM;
 
-	char	*pathname;
+	char	pathname[256];
 	char	*split[256];
 	char	path_buf[257];
 	char	tmp_buf[MAX_BUF];
@@ -767,10 +786,14 @@ void	CWD(char *buf, char *print_buf)
 	}
 
 	///// change '~' to home directory /////
-	if (!strcmp(split[1], "~"))
-		pathname = getenv("HOME");
+	if (split[1][0] == '~')
+	{
+		strcpy(pathname, getenv("HOME"));
+		if (strlen(split[1]) > 1)
+			strcat(pathname, split[1] + 1);
+	}
 	else
-		pathname = split[1];
+		strcpy(pathname, split[1]);
 
 	///////////// change working directory to argv[1]. if failed, print error and exit //////////////
 	if (chdir(pathname)< 0)
