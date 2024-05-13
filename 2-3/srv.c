@@ -438,26 +438,7 @@ void	NLST(char *buf, char *print_buf)
 	/////////// if pathname is not a directory or has other problem, dp = NULL //////////
 	if ((dp = opendir(pathname)) == NULL)
 	{
-		////// if pathname is not a directory and command has only -l option, not error //////
-		if (errno == ENOTDIR && lflag)
-		{
-			//////// load file status in struct stat infor ////////
-			if (stat(pathname, &infor) == -1)
-			{
-				/////// error handling when failed to load file status ///////
-				sprintf(print_buf, "Error : %s\n", strerror(errno));
-				return ;
-			}
-			////////// print formatted file status string and exit //////////
-			MtoS(&infor, pathname, print_buf);
-			return ;
-		}
-		else if (errno == ENOTDIR)
-		{
-			sprintf(print_buf, "%s\n", pathname);
-			return ;
-		}
-		///////// if error caused by other problem, print error string and exit ////////
+		///////// if error caused, print error string and exit ////////
 		if (errno == EACCES)
 			errorM = "cannot access";
 		else
@@ -626,24 +607,7 @@ void	LIST(char *buf, char *print_buf)
 	////////////////////// open directory stream by pathname ////////////////////////////
 	if ((dp = opendir(pathname)) == NULL)
 	{
-		////// if pathname is not a directory and command has only -l option, not error //////
-		if (errno == ENOTDIR)
-		{
-			if(stat(pathname, &infor) == -1)
-			{
-				if (errno == EACCES)
-					errorM = "cannot access";
-				else if (errno == ENOENT)
-					errorM = "No such file or directory";
-				else
-					errorM = strerror(errno);
-				sprintf(print_buf, "Error : %s\n", errorM);
-				return ;
-			}
-			MtoS(&infor, pathname, print_buf);
-			return ;
-		}
-		///////// if error caused by other problem, print error string and exit ////////
+		///////// if error caused, print error string and exit ////////
 		sprintf(print_buf, "Error : %s\n", strerror(errno));
 		return ;
 	}
