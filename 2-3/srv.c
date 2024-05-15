@@ -423,6 +423,7 @@ void	NLST(char *buf, char *print_buf)
 		case '?':
 			errorM = "Error: invalid option\n";
 			strcat(print_buf, errorM);
+			write(1, print_buf, strlen(print_buf));
 			return ;
 		}
 	}
@@ -431,6 +432,7 @@ void	NLST(char *buf, char *print_buf)
 	{
 		errorM = "Error: too many arguments\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -457,6 +459,7 @@ void	NLST(char *buf, char *print_buf)
 		else
 			errorM = strerror(errno);
 		sprintf(print_buf, "Error : %s\n", errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -514,6 +517,7 @@ void	NLST(char *buf, char *print_buf)
 			if (stat(path_buf, &infor) == -1)
 			{
 				sprintf(print_buf, "Error : %s\n", strerror(errno));
+				write(1, print_buf, strlen(print_buf));
 				return ;
 			}
 			MtoS(&infor, filename[i], line_buf);
@@ -533,6 +537,7 @@ void	NLST(char *buf, char *print_buf)
 			if (stat(path_buf, &infor) == -1)
 			{
 				sprintf(print_buf, "Error : %s\n", strerror(errno));
+				write(1, print_buf, strlen(print_buf));
 				return ;
 			}
 			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
@@ -598,6 +603,7 @@ void	LIST(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -606,6 +612,7 @@ void	LIST(char *buf, char *print_buf)
 	{
 		errorM = "Error: too many arguments\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -628,6 +635,7 @@ void	LIST(char *buf, char *print_buf)
 	{
 		///////// if error caused, print error string and exit ////////
 		sprintf(print_buf, "Error : %s\n", strerror(errno));
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -663,6 +671,7 @@ void	LIST(char *buf, char *print_buf)
 		if (stat(path_buf, &infor) == -1)
 		{
 			sprintf(print_buf, "Error : %s\n", strerror(errno));
+			write(1, print_buf, strlen(print_buf));
 			return ;
 		}
 		MtoS(&infor, filename[i], line_buf);
@@ -710,6 +719,7 @@ void	PWD(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -718,6 +728,7 @@ void	PWD(char *buf, char *print_buf)
 	{
 		errorM = "Error: argument is not required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -766,6 +777,7 @@ void	CWD(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -774,6 +786,7 @@ void	CWD(char *buf, char *print_buf)
 	{
 		errorM = "Error: argument is required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -782,6 +795,7 @@ void	CWD(char *buf, char *print_buf)
 	{
 		errorM = "Error: too much argument\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -803,6 +817,7 @@ void	CWD(char *buf, char *print_buf)
 		else
 			errorM = strerror(errno);
 		sprintf(print_buf, "Error: %s\n", errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 	
@@ -849,6 +864,7 @@ void	CDUP(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -857,6 +873,7 @@ void	CDUP(char *buf, char *print_buf)
 	{
 		errorM = "Error: too much argument\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -868,6 +885,7 @@ void	CDUP(char *buf, char *print_buf)
 		else
 			errorM = strerror(errno);
 		sprintf(print_buf, "Error: %s\n", errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 	
@@ -915,6 +933,7 @@ void	MKD(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -923,6 +942,7 @@ void	MKD(char *buf, char *print_buf)
 	{
 		errorM = "Error: argument is required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -939,6 +959,7 @@ void	MKD(char *buf, char *print_buf)
 				errorM = strerror(errno);
 			sprintf(line_buf, "Error: cannot create directory \'%s\': %s\n", split[i], errorM);
 			strcat(print_buf, line_buf);
+			write(1, print_buf, strlen(print_buf));
 		}
 		else
 		{
@@ -986,6 +1007,7 @@ void	DELE(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -994,6 +1016,7 @@ void	DELE(char *buf, char *print_buf)
 	{
 		errorM = "Error: argument is required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1006,6 +1029,7 @@ void	DELE(char *buf, char *print_buf)
 			////// if failed to remove, print error message //////
 			sprintf(line_buf, "Error: failed to delete \'%s\'\n", split[i]);
 			strcat(print_buf, line_buf);
+			write(1, print_buf, strlen(print_buf));
 		}
 		else
 		{
@@ -1053,6 +1077,7 @@ void	RMD(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1061,6 +1086,7 @@ void	RMD(char *buf, char *print_buf)
 	{
 		errorM = "Error: argument is required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1072,6 +1098,7 @@ void	RMD(char *buf, char *print_buf)
 		{
 			sprintf(line_buf, "Error: failed to remove \'%s\'\n", split[i]);
 			strcat(print_buf, line_buf);
+			write(1, print_buf, strlen(print_buf));
 		}
 		else
 		{
@@ -1119,6 +1146,7 @@ void	RN(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1127,6 +1155,7 @@ void	RN(char *buf, char *print_buf)
 	{
 		errorM = "Error: two argumens are required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1135,6 +1164,7 @@ void	RN(char *buf, char *print_buf)
 	{
 		errorM = "Error: name to change already exists\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1143,6 +1173,7 @@ void	RN(char *buf, char *print_buf)
 	{
 		sprintf(print_buf, "Error: %s\n", strerror(errno));
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1181,6 +1212,7 @@ void	QUIT(char *buf, char *print_buf)
 	{
 		errorM = "Error: invalid option\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -1189,6 +1221,7 @@ void	QUIT(char *buf, char *print_buf)
 	{
 		errorM = "Error: argument is not required\n";
 		strcat(print_buf, errorM);
+		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
