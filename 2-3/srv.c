@@ -1137,7 +1137,7 @@ void	RN(char *buf, char *print_buf)
 	split[len] = NULL;
 
 	///////// print command name //////////
-	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	sprintf(print_buf, "> %s\t\t[%d]\n", "RNFR & RNTO", getpid());
 	write(1, print_buf, strlen(print_buf));
 	memset(print_buf, 0, BUF_SIZE);
 
