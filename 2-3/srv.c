@@ -1130,16 +1130,16 @@ void	RN(char *buf, char *print_buf)
 	optind = 0;
 	opterr = 0;
 
-	///////// print command name //////////
-	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
-
 	///////////// split a command by space && stored in split[] ////////////
 	strcpy(tmp_buf, buf);
 	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
+
+	///////// print command name //////////
+	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
+	write(1, print_buf, strlen(print_buf));
+	memset(print_buf, 0, BUF_SIZE);
 
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
