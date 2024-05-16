@@ -45,23 +45,38 @@ int main(int argc, char *argv[])
 		printf("** Client is connected **\n");
 		printf(" - IP: %s\n - Port: %d\n", inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
 
-        if((fp_checkIP = fopen("access.txt", "r")) == NULL)
+		if((fp_checkIP = fopen("access.txt", "r")) == NULL)
 			exit(1);
+		
 		char buf[MAX_BUF];
-		int flag = 0;
-		while (fgets(buf, MAX_BUF, fp_checkIP) != NULL)
+		char cli_ip[MAX_BUF];
+		strcpy(cli_ip, inet_ntoa(cliaddr.sin_addr));
+		char *cli_ips[5];
+		cli_ips[0] = strtok(cli_ip, ".");
+		for (int i = 1; (cli_ips[i] = strtok(NULL, ".")) != NULL; i++);
+		
+		char *ptr, *tmp;
+		while ((ptr = fgets(buf, MAX_BUF, fp_checkIP)) != NULL)
 		{
-			if (!strcmp(buf, inet_ntoa(cliaddr.sin_addr)))
-				write(connfd, "ACCEPTED", MAX_BUF);
-			flag++;
+			tmp = strtok(buf, ".");
+			if (strcmp(tmp, cli_ips[0]) && strcmp(tmp, "*"))
+				continue;
+			for (int i = 1; cli_ips[i]; i++)
+			{
+				tmp = strtok(NULL, ".");
+				if (strcmp(tmp, cli_ips[i]) && strcmp(tmp, "*"))
+					continue;
+			}
 			break;
 		}
 		fclose(fp_checkIP);
-		if (!flag)
+		if (!ptr)
 		{
 			printf("** It is NOT authenticated client **\n");
 			write(connfd, "REJECTION", MAX_BUF);
 		}
+		else
+			write(connfd, "ACCEPTED", MAX_BUF);
 
         if (log_auth(connfd) == 0)
         {
