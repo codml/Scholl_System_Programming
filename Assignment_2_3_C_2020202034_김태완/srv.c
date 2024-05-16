@@ -959,7 +959,7 @@ void	MKD(char *buf, char *print_buf)
 				errorM = strerror(errno);
 			sprintf(line_buf, "Error: cannot create directory \'%s\': %s\n", split[i], errorM);
 			strcat(print_buf, line_buf);
-			write(1, line_buf, strlen(line_buf));
+			write(1, print_buf, strlen(print_buf));
 		}
 		else
 		{
@@ -1029,7 +1029,7 @@ void	DELE(char *buf, char *print_buf)
 			////// if failed to remove, print error message //////
 			sprintf(line_buf, "Error: failed to delete \'%s\'\n", split[i]);
 			strcat(print_buf, line_buf);
-			write(1, line_buf, strlen(line_buf));
+			write(1, print_buf, strlen(print_buf));
 		}
 		else
 		{
@@ -1098,7 +1098,7 @@ void	RMD(char *buf, char *print_buf)
 		{
 			sprintf(line_buf, "Error: failed to remove \'%s\'\n", split[i]);
 			strcat(print_buf, line_buf);
-			write(1, line_buf, strlen(line_buf));
+			write(1, print_buf, strlen(print_buf));
 		}
 		else
 		{
@@ -1172,6 +1172,7 @@ void	RN(char *buf, char *print_buf)
 	if (rename(split[1], split[3]) == -1)
 	{
 		sprintf(print_buf, "Error: %s\n", strerror(errno));
+		strcat(print_buf, errorM);
 		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
