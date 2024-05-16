@@ -850,7 +850,7 @@ void	CDUP(char *buf, char *print_buf)
 
 	///////////// split a command by space && stored in split[] ////////////
 	strcpy(print_buf, buf);
-	for (char *ptr = strtok(print_buf, " "); ptr; ptr = strtok(NULL, " "))
+	for (char *ptr = strtok(buf, " "); ptr; ptr = strtok(NULL, " "))
 		split[len++] = ptr;
 	split[len] = NULL;
 
