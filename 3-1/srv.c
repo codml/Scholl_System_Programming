@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pwd.h>
 
 #define MAX_BUF 20
 
@@ -61,12 +62,15 @@ int main(int argc, char *argv[])
 			tmp = strtok(buf, ".");
 			if (strcmp(tmp, cli_ips[0]) && strcmp(tmp, "*"))
 				continue;
-			for (int i = 1; cli_ips[i]; i++)
-			{
-				tmp = strtok(NULL, ".");
-				if (strcmp(tmp, cli_ips[i]) && strcmp(tmp, "*"))
-					continue;
-			}
+			tmp = strtok(NULL, ".");
+			if (strcmp(tmp, cli_ips[1]) && strcmp(tmp, "*"))
+				continue;
+			tmp = strtok(NULL, ".");
+			if (strcmp(tmp, cli_ips[2]) && strcmp(tmp, "*"))
+				continue;
+			tmp = strtok(NULL, ".");
+			if (strcmp(tmp, cli_ips[3]) && strcmp(tmp, "*"))
+				continue;
 			break;
 		}
 		fclose(fp_checkIP);
@@ -74,6 +78,8 @@ int main(int argc, char *argv[])
 		{
 			printf("** It is NOT authenticated client **\n");
 			write(connfd, "REJECTION", MAX_BUF);
+			close(connfd);
+			continue;
 		}
 		else
 			write(connfd, "ACCEPTED", MAX_BUF);
@@ -134,17 +140,10 @@ int user_match(char *user, char *passwd)
 
     fp = fopen("passwd", "r");
 
-	char buf[MAX_BUF];
-	while (fgets(buf, MAX_BUF, fp) != NULL)
+	while ((pw = fgetpwent(fp)) != NULL)
 	{
-		if (!strcmp(strtok(buf, ":"), user))
-		{
-			if (!strcmp(strtok(NULL, ":"), passwd))
-			{
-				fclose(fp);
-				return 1;
-			}
-		}
+		if (!strcmp(user, pw->pw_name) && !strcmp(passwd, pw->pw_passwd))
+			return 1;
 	}
 	fclose(fp);
 	return 0;

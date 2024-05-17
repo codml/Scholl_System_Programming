@@ -63,15 +63,14 @@ void log_in(int sockfd)
 		if ((n = read(STDIN_FILENO, buf, MAX_BUF)) <= 0)
 			exit(1);
 		buf[n - 1] = '\0';
-		write(sockfd, buf, strlen(buf));
+		if (write(sockfd, buf, MAX_BUF) <= 0)
+			exit(0);
 
 		strcpy(user, buf);
 
-		write(STDOUT_FILENO, "Input Password : ", strlen("Input Password : "));
-        if ((n = read(STDIN_FILENO, buf, MAX_BUF)) <= 0)
-			exit(1);
-		buf[n - 1] = '\0';
-		write(sockfd, buf, strlen(buf));
+		passwd = getpass("Input passwd : ");
+		if (write(sockfd, passwd, MAX_BUF) <= 0)
+			exit(0);
 
 		n = read(sockfd, buf, MAX_BUF);
 		buf[n] = '\0';
