@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 #define MAX_BUF 20
 #define CONT_PORT 20001
@@ -33,7 +34,11 @@ int main(int argc, char *argv[])
 	servaddr.sin_addr.s_addr=inet_addr(argv[1]);
 	servaddr.sin_port=htons(atoi(argv[2]));
 
-    connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+	{
+		perror(strerror(errno));
+		exit(1);
+	}
 
     log_in(sockfd);
     close(sockfd);
@@ -46,7 +51,10 @@ void log_in(int sockfd)
     char user[MAX_BUF], *passwd, buf[MAX_BUF];
 
     if ((n = read(sockfd, buf, MAX_BUF)) <= 0)
-        return ;
+	{
+		perror("Read error\n");
+		exit(1);
+	}
     buf[n] = '\0';
     if (!strcmp(buf, "REJECTION"))
     {
@@ -70,13 +78,15 @@ void log_in(int sockfd)
 
 		passwd = getpass("Input passwd : ");
 		if (write(sockfd, passwd, MAX_BUF) <= 0)
-			exit(0);
+			exit(1);
 
-		n = read(sockfd, buf, MAX_BUF);
+		if ((n = read(sockfd, buf, MAX_BUF)) <= 0)
+			exit(1);
 		buf[n] = '\0';
         if (!strcmp(buf, "OK"))
         {
-            n = read(sockfd, buf, MAX_BUF);
+            if ((n = read(sockfd, buf, MAX_BUF)) <= 0)
+				exit(1);
             buf[n] = '\0';
 
             if (!strcmp(buf, "OK"))
