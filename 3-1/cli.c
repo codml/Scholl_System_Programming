@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     ////// make socket: domain: IPv4, type: stream(TCP) //////
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		perror(strerror(errno));
+		perror("socket");
 		exit(1);
 	}
 
