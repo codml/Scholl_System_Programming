@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     ///// make socket for server //////
     if ((listenfd = socket(PF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		perror(strerror(errno));
+		perror("socket");
 		exit(1);
 	}
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     ///// bind server address with server socket /////
     if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
 	{
-		perror(strerror(errno));
+		perror("bind");
 		exit(1);
 	}
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         int clilen = sizeof(cliaddr);
         if ((connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen)) < 0) /// accept client's connection ///
 		{
-			perror(strerror(errno));
+			perror("accept");
 			exit(1);
 		}
 		printf("** Client is connected **\n"); // success to connect

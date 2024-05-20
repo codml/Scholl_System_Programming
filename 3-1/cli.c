@@ -80,7 +80,7 @@ void log_in(int sockfd)
 	// read REJECTION or ACCEPTED -> ip access //
     if ((n = read(sockfd, buf, MAX_BUF)) <= 0)
 	{
-		perror("Read error\n");
+		perror("Read error");
 		exit(1);
 	}
     buf[n] = '\0';
