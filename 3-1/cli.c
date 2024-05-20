@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	///// connect to server + error handling /////
     if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
 	{
-		perror(strerror(errno));
+		perror("connect");
 		exit(1);
 	}
 
