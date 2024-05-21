@@ -84,16 +84,16 @@ int main(int argc, char *argv[])
 		char *ptr, *tmp; // ptr -> check incorrect ip address, tmp -> splitted buf
 		while ((ptr = fgets(buf, MAX_BUF, fp_checkIP)) != NULL)
 		{
-			tmp = strtok(buf, ".\n");
+			tmp = strtok(buf, ".");
 			if (!tmp || (strcmp(tmp, cli_ips[0]) && strcmp(tmp, "*"))) // first Byte dismatch
 				continue;
-			tmp = strtok(NULL, ".\n");
+			tmp = strtok(NULL, ".");
 			if (!tmp || (strcmp(tmp, cli_ips[1]) && strcmp(tmp, "*"))) // second Byte dismatch
 				continue;
-			tmp = strtok(NULL, ".\n");
+			tmp = strtok(NULL, ".");
 			if (!tmp || (strcmp(tmp, cli_ips[2]) && strcmp(tmp, "*"))) // third Byte dismatch
 				continue;
-			tmp = strtok(NULL, ".\n");
+			tmp = strtok(NULL, ".");
 			if (!tmp || (strcmp(tmp, cli_ips[3]) && strcmp(tmp, "*"))) // last Byte dismatch
 				continue;
 			break; // if match with ip in 'access.txt', stop compare
