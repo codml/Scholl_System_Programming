@@ -43,7 +43,6 @@ void main(int argc, char **argv)
 		perror("connect error");
 		exit(1);
 	}
-
     while (1)
     {
 		memset(buff, 0, BUF_SIZE);
@@ -62,27 +61,22 @@ void main(int argc, char **argv)
 		else
 			strcpy(cmd, "UNKNOWN");
 
-
-		datafd = socket(AF_INET, SOCK_STREAM, 0);
-
-		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
-
-		port = 10001 + time(NULL) / 20000;
+		port = 10001 + time(NULL) % 20000;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin_family=AF_INET;
 		temp.sin_addr.s_addr=htonl(INADDR_ANY);
 		temp.sin_port=htons(port);
 
+		datafd = socket(AF_INET, SOCK_STREAM, 0);
+		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
+		listen(datafd, 5);
 		
-
         convert_addr_to_str(portcmd, &temp);
-		if (write(ctrlfd, portcmd, strlen(portcmd) < 0))
+		if (write(ctrlfd, portcmd, strlen(portcmd)) <= 0)
 		{
 			perror("write error");
 			exit(1);
 		}
-
-		listen(datafd, 5);
 		n = sizeof(temp);
 		if ((dataconfd = accept(datafd, (struct sockaddr *)&temp, &n)) < 0)
 		{
@@ -126,10 +120,11 @@ void main(int argc, char **argv)
 
 void convert_addr_to_str(char *buf, struct sockaddr_in *tmp)
 {
-	char *ptr;
+	char *bu, *ptr;
 
 	strcpy(buf, "PORT ");
 	strcat(buf, inet_ntoa(tmp->sin_addr));
+	bu = buf;
 	while (ptr = strchr(buf, '.'))
 		*ptr = ',';
 	sprintf(buf + strlen(buf), ",%d,%d", (tmp->sin_port) >> 8, (tmp->sin_port) & 256);

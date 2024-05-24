@@ -47,7 +47,11 @@ void main(int argc, char **argv)
     server_addr.sin_port=htons(atoi(argv[1]));
 
 	///// bind server address with server socket /////
-    bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("bind error");
+        exit(1);
+    }
 
     ////// open queue for client connect /////
     listen(server_fd, 5);
@@ -57,7 +61,7 @@ void main(int argc, char **argv)
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len);
 	while (1)
 	{
-        if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
+        if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
         {
             perror("read error");
             exit(1);
@@ -70,8 +74,7 @@ void main(int argc, char **argv)
             exit(1);
         }
         data_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-        if (connect(data_fd, (struct sockaddr *)&client_addr, len) < 0)
+        if (connect(data_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
             perror("connect error");
             exit(1);
