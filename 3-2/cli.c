@@ -65,14 +65,15 @@ void main(int argc, char **argv)
 
 		datafd = socket(AF_INET, SOCK_STREAM, 0);
 
+		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
+
 		port = 10001 + time(NULL) / 20000;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin_family=AF_INET;
-		temp.sin_addr.s_addr=inet_addr(INADDR_ANY);
+		temp.sin_addr.s_addr=htonl(INADDR_ANY);
 		temp.sin_port=htons(port);
 
-		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
-		listen(datafd, 5);
+		
 
         convert_addr_to_str(portcmd, &temp);
 		if (write(ctrlfd, portcmd, strlen(portcmd) < 0))
@@ -81,6 +82,7 @@ void main(int argc, char **argv)
 			exit(1);
 		}
 
+		listen(datafd, 5);
 		n = sizeof(temp);
 		if ((dataconfd = accept(datafd, (struct sockaddr *)&temp, &n)) < 0)
 		{
@@ -120,9 +122,6 @@ void main(int argc, char **argv)
 		write(STDOUT_FILENO, buff, strlen(buff));
 		close(dataconfd);
     }
-    
-
-
 }
 
 void convert_addr_to_str(char *buf, struct sockaddr_in *tmp)

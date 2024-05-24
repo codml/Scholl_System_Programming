@@ -4,6 +4,7 @@
         "dirent.h": "c",
         "types.h": "c",
         "socket.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "pwd.h": "c"
     }
 }

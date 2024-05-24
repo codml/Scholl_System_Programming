@@ -4,7 +4,7 @@ NAME = cli srv
 all : $(NAME)
 
 %.o : %.c
-	$(CC) -o $@ $< -lsocket
+	$(CC) -g -o $@ $< -lsocket
 
 clean:
 	rm -rf $(NAME)
