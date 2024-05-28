@@ -18,7 +18,7 @@
 #define BUF_SIZE 4096
 #define MAX_BUF 4096
 
-int convert_str_to_addr(char *str, struct sockaddr_in *addr);
+void	convert_str_to_addr(char *str, struct sockaddr_in *addr);
 void	NLST(char *buf, char *print_buf);
 void	MtoS(struct stat *infor, const char *pathname, char *print_buf);
 
@@ -58,71 +58,92 @@ void main(int argc, char **argv)
 
     len = sizeof(client_addr);
     /////// server accept client's connect, get client address & port ///////
-    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len);
 	while (1)
 	{
-        if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
-        {
-            perror("read error");
-            exit(1);
-        }
-        buff[n] = '\0';
-        printf("%s\n", buff);
-		if (convert_str_to_addr(buff, &client_addr) < 0)
-        {
-            perror("Read error");
-            exit(1);
-        }
+		if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len)) < 0)
+		{
+			perror("control accept error");
+			exit(1);
+		}
+		while (1)
+		{
+			if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
+			{
+				perror("read error");
+				exit(1);
+			}
+			buff[n] = '\0';
+			printf("%s\n", buff);
 
-		data_fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (connect(data_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
-        {
-            perror("connect error");
-            exit(1);
-        }
+			if (!strcmp(buff, "QUIT"))
+			{
+				strcpy(send_buff, "221 Goodbye.");
+				if (write(client_fd, send_buff, strlen(send_buff)) < 0)
+				{
+					perror("write error");
+					exit(1);
+				}
+				printf("%s\n", send_buff);
+				close(client_fd);
+				break;
+			}
 
-        strcpy(send_buff, "200 PORT command successful");
-        write(client_fd, send_buff, strlen(send_buff));
-		printf("%s\n", send_buff);
-        
-        if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
-        {
-            perror("read error");
-            exit(1);
-        }
-        buff[n] = '\0';
-        printf("%s\n", buff);
+			convert_str_to_addr(buff, &client_addr);
 
-        strcpy(send_buff, "150 Opening data connection for directory list");
-        write(client_fd, send_buff, strlen(send_buff));
-        printf("%s\n", send_buff);
+			data_fd = socket(AF_INET, SOCK_STREAM, 0);
+			if (connect(data_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+			{
+				strcpy(send_buff, "550 Failed to access.");
+				write(client_fd, send_buff, strlen(send_buff));
+				close(data_fd);
+				close(client_fd);
+				break;
+			}
 
-		memset(send_buff, 0, BUF_SIZE);
-        NLST(buff, send_buff);
-        write(data_fd, send_buff, strlen(send_buff));
+			strcpy(send_buff, "200 PORT command successful");
+			write(client_fd, send_buff, strlen(send_buff));
+			printf("%s\n", send_buff);
+			
+			if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
+			{
+				perror("read error");
+				exit(1);
+			}
+			buff[n] = '\0';
+			printf("%s\n", buff);
 
-        strcpy(send_buff, "226 Result is sent successfully");
-        write(client_fd, send_buff, strlen(send_buff));
-        printf("%s\n", send_buff);
-        close(data_fd);
+			strcpy(send_buff, "150 Opening data connection for directory list");
+			write(client_fd, send_buff, strlen(send_buff));
+			printf("%s\n", send_buff);
+
+			memset(send_buff, 0, BUF_SIZE);
+			NLST(buff, send_buff);
+			if (write(data_fd, send_buff, strlen(send_buff)) < 0)
+			{
+				strcpy(send_buff, "550 Failed transmission.");
+				write(client_fd, send_buff, strlen(send_buff));
+				printf("%s\n", send_buff);
+				close(data_fd);
+			}
+			else
+			{
+				strcpy(send_buff, "226 Result is sent successfully");
+				write(client_fd, send_buff, strlen(send_buff));
+				printf("%s\n", send_buff);
+				close(data_fd);
+			}
+		}
 	}
-
 }
 
-int convert_str_to_addr(char *str, struct sockaddr_in *addr)
+void convert_str_to_addr(char *str, struct sockaddr_in *addr)
 {
-    unsigned long ip = 0;
-    unsigned int port = 0;
-    char *tmp;
-    char *ptr = strtok(str, " ");
+    unsigned long	ip = 0;
+    unsigned int	port = 0;
+	char			*ptr, *tmp;
 
-    if (!ptr || strcmp(ptr, "PORT"))
-        return -1;
-    
-    if ((ptr = strtok(NULL, " ")) == NULL)
-        return -1;
-
-    tmp = ptr;
+	strtok(str, " ");
+    tmp = strtok(NULL, " ");
     ptr = strtok(tmp, ",");
     ip += atoi(ptr) << 24;
     ptr = strtok(NULL, ",");
@@ -140,7 +161,6 @@ int convert_str_to_addr(char *str, struct sockaddr_in *addr)
     addr->sin_addr.s_addr = htonl(ip);
     addr->sin_port = htons(port);
     addr->sin_family = AF_INET;
-    return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////

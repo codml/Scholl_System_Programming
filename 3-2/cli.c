@@ -18,13 +18,13 @@ void convert_addr_to_str(char *buf, struct sockaddr_in *tmp);
 
 void main(int argc, char **argv)
 {
-    char *hostport;
-	char buff[BUF_SIZE], portcmd[BUF_SIZE], cmd[BUF_SIZE];
-    int ctrlfd, datafd, dataconfd;
-	int n, port;
-    struct sockaddr_in temp;
-	int		len;
-	char	*split[256];
+    char				*hostport;
+	char 				buff[BUF_SIZE], portcmd[BUF_SIZE], cmd[BUF_SIZE];
+    int 				ctrlfd, datafd, dataconfd;
+	int					n, port, bytes;
+    struct sockaddr_in	temp;
+	int					len;
+	char				*split[256];
 
     ///// check the number of arguments /////
 	if (argc != 3)
@@ -78,13 +78,32 @@ void main(int argc, char **argv)
 			strcat(cmd, split[i]);
 		}
 
+		if (!strcmp(cmd, "QUIT"))
+		{
+			if (write(ctrlfd, cmd, strlen(cmd)) < 0)
+			{
+				perror("write error");
+				exit(1);
+			}
+
+			if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+			{
+				perror("read error");
+				exit(1);
+			}
+			buff[n] = 0;
+			printf("%s\n", buff);
+			close(ctrlfd);
+			return ;
+		}
+
 		srand(time(NULL));
 		port = 10001 + rand() % 20000;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin_family=AF_INET;
 		temp.sin_addr.s_addr=htonl(INADDR_ANY);
 		temp.sin_port=htons(port);
-		
+
 		datafd = socket(AF_INET, SOCK_STREAM, 0);
 		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
 		listen(datafd, 5);
@@ -133,8 +152,7 @@ void main(int argc, char **argv)
 		}
 		buff[n] = '\0';
 		write(STDOUT_FILENO, buff, strlen(buff));
-		printf("OK. %d bytes is received.\n", n);
-		close(dataconfd);
+		bytes = n;
 
 		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 		{
@@ -143,6 +161,11 @@ void main(int argc, char **argv)
 		}
 		buff[n] = '\0';
 		printf("%s\n", buff);
+		
+		if (!strncmp(buff, "226", 3))
+			printf("OK. %d bytes is received.\n", bytes);
+
+		close(dataconfd);
     }
 }
 
@@ -155,5 +178,5 @@ void convert_addr_to_str(char *buf, struct sockaddr_in *tmp)
 	bu = buf;
 	while (ptr = strchr(buf, '.'))
 		*ptr = ',';
-	sprintf(buf + strlen(buf), ",%d,%d", ntohs(tmp->sin_port) >> 8, ntohs(tmp->sin_port) & 255);
+	sprintf(buf + strlen(buf), ",%d,%d", ntohs(tmp->sin_port) >> 8, ntohs(tmp->sin_port) & 0xFF);
 }
