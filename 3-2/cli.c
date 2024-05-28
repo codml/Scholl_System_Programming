@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 
 #define BUF_SIZE 4096
 
@@ -22,6 +23,8 @@ void main(int argc, char **argv)
     int ctrlfd, datafd, dataconfd;
 	int n, port;
     struct sockaddr_in temp;
+	int		len;
+	char	*split[256];
 
     ///// check the number of arguments /////
 	if (argc != 3)
@@ -56,27 +59,43 @@ void main(int argc, char **argv)
         }
 		buff[n - 1] = '\0';
 
-		if (strcmp(buff, "ls")) // need to fix
-			strcpy(cmd, "NLST");
-		else
-			strcpy(cmd, "UNKNOWN");
+		len = 0;
+		//////// split user command by white spaces ///////////////
+		for (char *ptr = strtok(buff, " \b\v\f\r\t\n"); ptr; ptr = strtok(NULL, " \b\v\f\r\t\n"))
+			split[len++] = ptr;
+		split[len] = NULL;
 
-		port = 10001 + time(NULL) % 20000;
+		/////// ls -> NLST ///////
+		if (!strcmp(split[0], "ls"))
+			strcpy(cmd, "NLST");
+		/////// quit -> QUIT ////////
+		else if (!strcmp(split[0], "quit") && len == 1)
+			strcpy(cmd, "QUIT");
+		////// send options & arguments of commands too //////
+		for (int i = 1; i < len; i++)
+		{
+			strcat(cmd, " ");
+			strcat(cmd, split[i]);
+		}
+
+		srand(time(NULL));
+		port = 10001 + rand() % 20000;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin_family=AF_INET;
 		temp.sin_addr.s_addr=htonl(INADDR_ANY);
 		temp.sin_port=htons(port);
-
+		
 		datafd = socket(AF_INET, SOCK_STREAM, 0);
 		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
 		listen(datafd, 5);
-		
+
         convert_addr_to_str(portcmd, &temp);
-		if (write(ctrlfd, portcmd, strlen(portcmd)) <= 0)
+		if (write(ctrlfd, portcmd, strlen(portcmd)) < 0)
 		{
 			perror("write error");
 			exit(1);
 		}
+
 		n = sizeof(temp);
 		if ((dataconfd = accept(datafd, (struct sockaddr *)&temp, &n)) < 0)
 		{
@@ -107,14 +126,23 @@ void main(int argc, char **argv)
 		buff[n] = '\0';
 		printf("%s\n", buff);
 
-		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+		if ((n = read(dataconfd, buff, BUF_SIZE)) < 0)
 		{
 			perror("read error");
 			exit(1);
 		}
 		buff[n] = '\0';
 		write(STDOUT_FILENO, buff, strlen(buff));
+		printf("OK. %d bytes is received.\n", n);
 		close(dataconfd);
+
+		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+		{
+			perror("read error");
+			exit(1);
+		}
+		buff[n] = '\0';
+		printf("%s\n", buff);
     }
 }
 
@@ -127,5 +155,5 @@ void convert_addr_to_str(char *buf, struct sockaddr_in *tmp)
 	bu = buf;
 	while (ptr = strchr(buf, '.'))
 		*ptr = ',';
-	sprintf(buf + strlen(buf), ",%d,%d", (tmp->sin_port) >> 8, (tmp->sin_port) & 256);
+	sprintf(buf + strlen(buf), ",%d,%d", ntohs(tmp->sin_port) >> 8, ntohs(tmp->sin_port) & 255);
 }

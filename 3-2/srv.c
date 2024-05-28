@@ -73,15 +73,18 @@ void main(int argc, char **argv)
             perror("Read error");
             exit(1);
         }
-        data_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+		data_fd = socket(AF_INET, SOCK_STREAM, 0);
         if (connect(data_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
             perror("connect error");
             exit(1);
         }
+
         strcpy(send_buff, "200 PORT command successful");
         write(client_fd, send_buff, strlen(send_buff));
-        printf("%s\n", send_buff);
+		printf("%s\n", send_buff);
+        
         if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
         {
             perror("read error");
@@ -89,10 +92,12 @@ void main(int argc, char **argv)
         }
         buff[n] = '\0';
         printf("%s\n", buff);
+
         strcpy(send_buff, "150 Opening data connection for directory list");
         write(client_fd, send_buff, strlen(send_buff));
         printf("%s\n", send_buff);
 
+		memset(send_buff, 0, BUF_SIZE);
         NLST(buff, send_buff);
         write(data_fd, send_buff, strlen(send_buff));
 
@@ -248,11 +253,6 @@ void	NLST(char *buf, char *print_buf)
 		split[len++] = ptr;
 	split[len] = NULL;
 
-	///////// print command name //////////
-	sprintf(print_buf, "> %s\t\t[%d]\n", split[0], getpid());
-	write(1, print_buf, strlen(print_buf));
-	memset(print_buf, 0, BUF_SIZE);
-
 	///////////// option parsing -> if unknown option -> error ///////////
 	while ((c = getopt(len, split, "al")) != -1)
 	{
@@ -267,7 +267,6 @@ void	NLST(char *buf, char *print_buf)
 		case '?':
 			errorM = "Error: invalid option\n";
 			strcat(print_buf, errorM);
-			write(1, print_buf, strlen(print_buf));
 			return ;
 		}
 	}
@@ -276,7 +275,6 @@ void	NLST(char *buf, char *print_buf)
 	{
 		errorM = "Error: too many arguments\n";
 		strcat(print_buf, errorM);
-		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -303,7 +301,6 @@ void	NLST(char *buf, char *print_buf)
 		else
 			errorM = strerror(errno);
 		sprintf(print_buf, "Error : %s\n", errorM);
-		write(1, print_buf, strlen(print_buf));
 		return ;
 	}
 
@@ -361,7 +358,6 @@ void	NLST(char *buf, char *print_buf)
 			if (stat(path_buf, &infor) == -1)
 			{
 				sprintf(print_buf, "Error : %s\n", strerror(errno));
-				write(1, print_buf, strlen(print_buf));
 				return ;
 			}
 			MtoS(&infor, filename[i], line_buf);
@@ -381,17 +377,12 @@ void	NLST(char *buf, char *print_buf)
 			if (stat(path_buf, &infor) == -1)
 			{
 				sprintf(print_buf, "Error : %s\n", strerror(errno));
-				write(1, print_buf, strlen(print_buf));
 				return ;
 			}
 			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
 				strcat(print_buf, "/");
-			if ((i - start_idx) % 5 == 4)
-				strcat(print_buf, "\n");
-			else
-				strcat(print_buf, " ");
+			strcat(print_buf, "\n");
 		}
-		strcat(print_buf, "\n");
 	}
 	closedir(dp);
 }
