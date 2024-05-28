@@ -44,6 +44,7 @@ void main(int argc, char **argv)
         exit(1);
     }
 
+	//// control connection socket ////
     ctrlfd = socket(AF_INET, SOCK_STREAM, 0);
 
     memset(&temp, 0, sizeof(temp));
@@ -61,14 +62,14 @@ void main(int argc, char **argv)
     {
 		memset(buff, 0, BUF_SIZE);
 
-        ///// write string which client will send to server /////
         write(STDOUT_FILENO, "> ", 2);
+		///// read user command from stdin /////
         if ((n = read(STDIN_FILENO, buff, BUF_SIZE)) < 0)
         {
             perror("Read error");
             exit(1);
         }
-		buff[n - 1] = '\0';
+		buff[n - 1] = '\0'; // erase '\n'
 
 		len = 0;
 		//////// split user command by white spaces ///////////////
@@ -76,6 +77,7 @@ void main(int argc, char **argv)
 			split[len++] = ptr;
 		split[len] = NULL;
 
+		/// if read invalid command, repeat read from stdin /// 
 		if (len == 0 || (strcmp(split[0], "ls") && strcmp(split[0], "quit")))
 			continue;
 		/////// ls -> NLST ///////
@@ -91,6 +93,7 @@ void main(int argc, char **argv)
 			strcat(cmd, split[i]);
 		}
 
+		//// if received quit, don't make data connection and just send FTP command ////
 		if (!strcmp(cmd, "QUIT"))
 		{
 			if (write(ctrlfd, cmd, strlen(cmd)) < 0)
@@ -99,28 +102,37 @@ void main(int argc, char **argv)
 				exit(1);
 			}
 
+			//// read "221 ..." from server ////
 			if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 			{
 				perror("read error");
 				exit(1);
 			}
 			buff[n] = 0;
+
+			////// print received string //////
 			printf("%s\n", buff);
+
+			//// close control connection ////
 			close(ctrlfd);
 			return ;
 		}
 
+		///// make random port num(10001 ~ 30000) /////
 		srand(time(NULL));
 		port = 10001 + rand() % 20000;
+
 		memset(&temp, 0, sizeof(temp));
 		temp.sin_family=AF_INET;
-		temp.sin_addr.s_addr=htonl(INADDR_ANY);
+		temp.sin_addr.s_addr=htonl(INADDR_LOOPBACK); //// loopback == 127.0.0.1 ////
 		temp.sin_port=htons(port);
 
+		/////// make socket for data connection ///////
 		datafd = socket(AF_INET, SOCK_STREAM, 0);
 		bind(datafd, (struct sockaddr *)&temp, sizeof(temp));
 		listen(datafd, 5);
 
+		/////// make PORT instruction and write to server //////
         convert_addr_to_str(portcmd, &temp);
 		if (write(ctrlfd, portcmd, strlen(portcmd)) < 0)
 		{
