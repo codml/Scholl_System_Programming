@@ -140,14 +140,16 @@ void main(int argc, char **argv)
 			exit(1);
 		}
 
+		/////// wait server's data connection requirement /////
 		n = sizeof(temp);
 		if ((dataconfd = accept(datafd, (struct sockaddr *)&temp, &n)) < 0)
 		{
 			perror("data connection error");
 			exit(1);
 		}
-		close(datafd);
+		close(datafd); // data connection -> one send, and close
 
+		//// read 200 response and print ////
 		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 		{
 			perror("read error");
@@ -156,6 +158,7 @@ void main(int argc, char **argv)
 		buff[n] = '\0';
 		printf("%s\n", buff);
 
+		//// 
 		if (write(ctrlfd, cmd, strlen(cmd)) < 0)
 		{
 			perror("write error");
