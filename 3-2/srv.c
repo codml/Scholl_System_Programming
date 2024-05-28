@@ -1,3 +1,14 @@
+////////////////////////////////////////////////////////////////////////
+// File Name    :srv.c                                                //
+// Date         :2024/05/29                                           //
+// OS           :Ubuntu 20.04.6 LTS 64bits                            //
+// Author       :Kim Tae Wan                                          //
+// Student ID   :2020202034                                           //
+// ------------------------------------------------------------------ //
+// Title        :System Programming Assignment #3-2: data connection  //
+// Description  :make control & data connection                       //
+////////////////////////////////////////////////////////////////////////
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,6 +146,17 @@ void main(int argc, char **argv)
 		}
 	}
 }
+
+////////////////////////////////////////////////////////////////////////
+// convert_str_to_addr                                                //
+// ================================================================== //
+// Input: char * -> file path name                              //
+//        struct sockaddr_in * -> buf for file information string                   //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: change file stat structure to long string format(in ls -l)//
+////////////////////////////////////////////////////////////////////////
 
 void convert_str_to_addr(char *str, struct sockaddr_in *addr)
 {

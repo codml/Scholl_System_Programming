@@ -1,3 +1,14 @@
+////////////////////////////////////////////////////////////////////////
+// File Name    :cli.c                                                //
+// Date         :2024/05/29                                           //
+// OS           :Ubuntu 20.04.6 LTS 64bits                            //
+// Author       :Kim Tae Wan                                          //
+// Student ID   :2020202034                                           //
+// ------------------------------------------------------------------ //
+// Title        :System Programming Assignment #3-2: data connection  //
+// Description  :make control & data connection                       //
+////////////////////////////////////////////////////////////////////////
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,11 +76,13 @@ void main(int argc, char **argv)
 			split[len++] = ptr;
 		split[len] = NULL;
 
+		if (len == 0 || (strcmp(split[0], "ls") && strcmp(split[0], "quit")))
+			continue;
 		/////// ls -> NLST ///////
 		if (!strcmp(split[0], "ls"))
 			strcpy(cmd, "NLST");
 		/////// quit -> QUIT ////////
-		else if (!strcmp(split[0], "quit") && len == 1)
+		else if (!strcmp(split[0], "quit"))
 			strcpy(cmd, "QUIT");
 		////// send options & arguments of commands too //////
 		for (int i = 1; i < len; i++)
@@ -168,6 +181,17 @@ void main(int argc, char **argv)
 		close(dataconfd);
     }
 }
+
+////////////////////////////////////////////////////////////////////////
+// convert_addr_to_str                                                //
+// ================================================================== //
+// Input: char * -> buffer to store result message(PORT ip,port)      //
+//        struct sockaddr_in * -> storing ip, port num                //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: make PORT instruction: separate ip & port in bytes        //
+////////////////////////////////////////////////////////////////////////
 
 void convert_addr_to_str(char *buf, struct sockaddr_in *tmp)
 {
