@@ -139,21 +139,12 @@ void main(int argc, char **argv)
 			memset(send_buff, 0, BUF_SIZE);
 			NLST(buff, send_buff);
 			if (write(data_fd, send_buff, strlen(send_buff)) < 0)
-			{
-				/////// if failed, send Fail code ///////
-				strcpy(send_buff, "550 Failed transmission.");
-				write(client_fd, send_buff, strlen(send_buff));
-				printf("%s\n", send_buff);
-				close(data_fd);
-			}
+				strcpy(send_buff, "550 Failed transmission."); // if failed, send Fail code
 			else
-			{
-				/////// if succeed, send Success code ////////
-				strcpy(send_buff, "226 Result is sent successfully");
-				write(client_fd, send_buff, strlen(send_buff));
-				printf("%s\n", send_buff);
-				close(data_fd);
-			}
+				strcpy(send_buff, "226 Result is sent successfully"); // if succeed, send Success code
+			write(client_fd, send_buff, strlen(send_buff));
+			printf("%s\n", send_buff);
+			close(data_fd);
 		}
 	}
 }
