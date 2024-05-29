@@ -149,7 +149,7 @@ void main(int argc, char **argv)
 		}
 		close(datafd); // data connection -> one send, and close
 
-		//// read 200 response and print ////
+		//// read 200 or 550 response and print ////
 		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 		{
 			perror("read error");
@@ -157,6 +157,14 @@ void main(int argc, char **argv)
 		}
 		buff[n] = '\0';
 		printf("%s\n", buff);
+
+		/// if connection failed, exit program ///
+		if (!strncmp(buff, "550", 3))
+		{
+			close(dataconfd);
+			close(ctrlfd);
+			exit(0);
+		}
 
 		//// send FTP command (NLST or QUIT) ////
 		if (write(ctrlfd, cmd, strlen(cmd)) < 0)
