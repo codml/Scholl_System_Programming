@@ -25,7 +25,7 @@
 
 #define BUF_SIZE 4096
 
-void convert_addr_to_str(char *buf, struct sockaddr_in *tmp);
+void convert_addr_to_str(char *buf, struct sockaddr_in *addr);
 
 void main(int argc, char **argv)
 {
@@ -158,13 +158,14 @@ void main(int argc, char **argv)
 		buff[n] = '\0';
 		printf("%s\n", buff);
 
-		//// 
+		//// send FTP command (NLST or QUIT) ////
 		if (write(ctrlfd, cmd, strlen(cmd)) < 0)
 		{
 			perror("write error");
 			exit(1);
 		}
 
+		///// read '150 opening ....' from server /////
 		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 		{
 			perror("read error");
@@ -173,15 +174,19 @@ void main(int argc, char **argv)
 		buff[n] = '\0';
 		printf("%s\n", buff);
 
+		/////// read command result from server via data connection ///////
 		if ((n = read(dataconfd, buff, BUF_SIZE)) < 0)
 		{
 			perror("read error");
 			exit(1);
 		}
 		buff[n] = '\0';
+
+		/////// print the result and store bytes //////
 		write(STDOUT_FILENO, buff, strlen(buff));
 		bytes = n;
 
+		/////// read '226....' from server //////
 		if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 		{
 			perror("read error");
@@ -190,9 +195,11 @@ void main(int argc, char **argv)
 		buff[n] = '\0';
 		printf("%s\n", buff);
 		
+		//////////// if succeed to receive in server, print OK & #bytes ////////////
 		if (!strncmp(buff, "226", 3))
 			printf("OK. %d bytes is received.\n", bytes);
 
+		////// close data connection //////
 		close(dataconfd);
     }
 }
@@ -208,14 +215,16 @@ void main(int argc, char **argv)
 // Purpose: make PORT instruction: separate ip & port in bytes        //
 ////////////////////////////////////////////////////////////////////////
 
-void convert_addr_to_str(char *buf, struct sockaddr_in *tmp)
+void convert_addr_to_str(char *buf, struct sockaddr_in *addr)
 {
-	char *bu, *ptr;
+	char *ptr, *tmp;
 
-	strcpy(buf, "PORT ");
-	strcat(buf, inet_ntoa(tmp->sin_addr));
-	bu = buf;
-	while (ptr = strchr(buf, '.'))
+	strcpy(buf, "PORT "); // add PORT to command
+	strcat(buf, inet_ntoa(addr->sin_addr)); // add ip address string to command
+	tmp = buf;
+	for (tmp = buf; ptr = strchr(tmp, '.'); tmp = ptr) // convert '.' to ','
 		*ptr = ',';
-	sprintf(buf + strlen(buf), ",%d,%d", ntohs(tmp->sin_port) >> 8, ntohs(tmp->sin_port) & 0xFF);
+
+	////// split port into bytes(2568 -> 10*2^8 + 8 -> 10,8)
+	sprintf(buf + strlen(buf), ",%d,%d", ntohs(addr->sin_port) >> 8, ntohs(addr->sin_port) & 0xFF);
 }

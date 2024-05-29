@@ -68,24 +68,27 @@ void main(int argc, char **argv)
     listen(server_fd, 5);
 
     len = sizeof(client_addr);
-    /////// server accept client's connect, get client address & port ///////
 	while (1)
 	{
+		/////// server accept client's connect, get client address & port ///////
 		if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len)) < 0)
 		{
 			perror("control accept error");
 			exit(1);
 		}
+		/////////// read FTP command & send result via data connection ///////////
 		while (1)
 		{
+			//////// receive PORT or QUIT ///////////
 			if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 			{
 				perror("read error");
 				exit(1);
 			}
 			buff[n] = '\0';
-			printf("%s\n", buff);
+			printf("%s\n", buff); // print it
 
+			//////// if received QUIT, send '221 Goodbye' and close connection ///////
 			if (!strcmp(buff, "QUIT"))
 			{
 				strcpy(send_buff, "221 Goodbye.");
@@ -99,8 +102,10 @@ void main(int argc, char **argv)
 				break;
 			}
 
+			///// if received PORT command, parse it into ip address & port num /////
 			convert_str_to_addr(buff, &client_addr);
 
+			////// make data connection socket and connect //////
 			data_fd = socket(AF_INET, SOCK_STREAM, 0);
 			if (connect(data_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
 			{
@@ -111,10 +116,12 @@ void main(int argc, char **argv)
 				break;
 			}
 
+			////// send the success message to client //////
 			strcpy(send_buff, "200 PORT command successful");
 			write(client_fd, send_buff, strlen(send_buff));
 			printf("%s\n", send_buff);
 			
+			///////// read NLST from client ////////////
 			if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
 			{
 				perror("read error");
@@ -123,14 +130,17 @@ void main(int argc, char **argv)
 			buff[n] = '\0';
 			printf("%s\n", buff);
 
+			////// send client that server will send FTP result via data connection ///////
 			strcpy(send_buff, "150 Opening data connection for directory list");
 			write(client_fd, send_buff, strlen(send_buff));
 			printf("%s\n", send_buff);
 
+			////// send NLST result to client //////
 			memset(send_buff, 0, BUF_SIZE);
 			NLST(buff, send_buff);
 			if (write(data_fd, send_buff, strlen(send_buff)) < 0)
 			{
+				/////// if failed, send Fail code ///////
 				strcpy(send_buff, "550 Failed transmission.");
 				write(client_fd, send_buff, strlen(send_buff));
 				printf("%s\n", send_buff);
@@ -138,6 +148,7 @@ void main(int argc, char **argv)
 			}
 			else
 			{
+				/////// if succeed, send Success code ////////
 				strcpy(send_buff, "226 Result is sent successfully");
 				write(client_fd, send_buff, strlen(send_buff));
 				printf("%s\n", send_buff);
@@ -150,12 +161,12 @@ void main(int argc, char **argv)
 ////////////////////////////////////////////////////////////////////////
 // convert_str_to_addr                                                //
 // ================================================================== //
-// Input: char * -> file path name                              //
-//        struct sockaddr_in * -> buf for file information string                   //
+// Input: char * -> PORT *,*,*,*,*,*                                  //
+//        struct sockaddr_in * -> buf for string ip addr, port        //
 //                                                                    //
 // Output: None                                                       //
 //                                                                    //
-// Purpose: change file stat structure to long string format(in ls -l)//
+// Purpose: convert PORT command to ip addr, port                     //
 ////////////////////////////////////////////////////////////////////////
 
 void convert_str_to_addr(char *str, struct sockaddr_in *addr)
@@ -164,21 +175,26 @@ void convert_str_to_addr(char *str, struct sockaddr_in *addr)
     unsigned int	port = 0;
 	char			*ptr, *tmp;
 
+	//////// split PORT, ip+port /////////
 	strtok(str, " ");
     tmp = strtok(NULL, " ");
-    ptr = strtok(tmp, ",");
-    ip += atoi(ptr) << 24;
-    ptr = strtok(NULL, ",");
-    ip += atoi(ptr) << 16;
-    ptr = strtok(NULL, ",");
-    ip += atoi(ptr) << 8;
-    ptr = strtok(NULL, ",");
-    ip += atoi(ptr);
-    ptr = strtok(NULL, ",");
-    port += atoi(ptr) << 8;
-    ptr = strtok(NULL, ",");
-    port += atoi(ptr);
 
+	//// make ip address string to 32-bit ip address ////
+	ptr = strtok(tmp, ",");
+	for (int i = 0; ptr && i < 4; i++)
+	{
+		ip += atoi(ptr) << (24 - 8*i);
+		ptr = strtok(NULL, ",");
+	}
+
+	//// combine upper byte #port, lower byte #port into 2 bytes #port ////
+	for (int i = 0; ptr && i < 2; i++)
+	{
+		port += atoi(ptr) << (8 - 8*i);
+    	ptr = strtok(NULL, ",");
+	}
+
+	////// fill struct sockaddr with ip, port //////
     memset(addr, 0, sizeof(struct sockaddr_in));
     addr->sin_addr.s_addr = htonl(ip);
     addr->sin_port = htons(port);
