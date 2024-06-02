@@ -31,6 +31,8 @@
 #define MAX_BUF 4096
 
 void	convert_str_to_addr(char *str, struct sockaddr_in *addr);
+int		log_auth(int connfd);
+int		user_match(char *user, char *passwd);
 void	NLST(char *buf, char *print_buf);
 void	MtoS(struct stat *infor, const char *pathname, char *print_buf);
 void	LIST(char *buf, char *print_buf);
@@ -40,8 +42,8 @@ int		CDUP(char *buf, char *print_buf);
 int		MKD(char *buf, char *print_buf);
 int		DELE(char *buf, char *print_buf);
 int		RMD(char *buf, char *print_buf);
-int		RNFR(char *buf, char *print_buf);
-int		RNTO(char *buf, char *print_buf);
+int		RNFR(char *buf, char *name_from);
+int		RNTO(char *buf, char *name_from);
 void	RETR(char *buf, char *print_buf);
 void	STOR(char *buf, char *print_buf);
 
@@ -52,6 +54,7 @@ void main(int argc, char **argv)
     struct sockaddr_in server_addr, client_addr;
     int server_fd, client_fd, data_fd;
     int len;
+	FILE *fp_checkIP, *fp_motd;
 
     ///// check the number of arguments /////
     if (argc != 2)
@@ -99,6 +102,61 @@ void main(int argc, char **argv)
 		if (pid == 0)
 		{
 			close(server_fd);
+			if((fp_checkIP = fopen("access.txt", "r")) == NULL) // open access.txt file and check error
+				exit(1);
+			
+			char buf[MAX_BUF]; // store a line from 'access.txt'
+			char cli_ip[MAX_BUF];
+			strcpy(cli_ip, inet_ntoa(client_addr.sin_addr)); // store client ip to cli_ip
+
+			char *cli_ips[5]; // split client ip address by '.'
+			cli_ips[0] = strtok(cli_ip, ".");
+			for (int i = 1; (cli_ips[i] = strtok(NULL, ".")) != NULL; i++);
+			
+			char *ptr, *tmp; // ptr -> check incorrect ip address, tmp -> splitted buf
+			while ((ptr = fgets(buf, MAX_BUF, fp_checkIP)) != NULL)
+			{
+				tmp = strtok(buf, ".\n");
+				if (!tmp || (strcmp(tmp, cli_ips[0]) && strcmp(tmp, "*"))) // first Byte dismatch
+					continue;
+				tmp = strtok(NULL, ".\n");
+				if (!tmp || (strcmp(tmp, cli_ips[1]) && strcmp(tmp, "*"))) // second Byte dismatch
+					continue;
+				tmp = strtok(NULL, ".\n");
+				if (!tmp || (strcmp(tmp, cli_ips[2]) && strcmp(tmp, "*"))) // third Byte dismatch
+					continue;
+				tmp = strtok(NULL, ".\n");
+				if (!tmp || (strcmp(tmp, cli_ips[3]) && strcmp(tmp, "*"))) // last Byte dismatch
+					continue;
+				break; // if match with ip in 'access.txt', stop compare
+			}
+			fclose(fp_checkIP); // no longer use
+			if (!ptr) // escape while() because of no matching
+			{
+				strcpy(send_buff, "431 This client can't access. Close the session.\n");
+				write(client_fd, send_buff, strlen(send_buff));
+				write(STDOUT_FILENO, send_buff, strlen(send_buff));
+				close(client_fd);
+				continue;
+			}
+			else // match
+			{
+				if ((fp_motd = fopen("motd", "r")) == NULL)
+					raise(SIGINT);
+				if (fgets(tmp_buff, TMP_SIZE, fp_motd) == NULL)
+					raise(SIGINT);
+				time_t t = time(NULL);
+				sprintf(send_buff, tmp_buff, ctime(&t));
+				write(client_fd, send_buff, strlen(send_buff));
+				write(STDOUT_FILENO, send_buff, strlen(send_buff));
+			}
+
+			if (log_auth(client_fd) == 0)
+			{
+				close(client_fd);
+				raise(SIGINT);
+			}
+
 			/////////// read FTP command & send result via data connection ///////////
 			while (1)
 			{
@@ -164,14 +222,40 @@ void main(int argc, char **argv)
 					if (DELE(buff, tmp_buff) < 0)
 						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
 					else
-						strcpy(send_buff, "250 DELE command performed successfully”.\n");
+						strcpy(send_buff, "250 DELE command performed successfully.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					continue;
 				}
 				else if (!strncmp(buff, "RNFR", 4))
 				{
-					
+					if (RNFR(buff, tmp_buff) < 0)
+					{
+						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
+						write(client_fd, send_buff, strlen(send_buff));
+						write(STDOUT_FILENO, send_buff, strlen(send_buff));
+						continue;
+					}
+					strcpy(send_buff, "350 File exists, ready to rename.\n");
+					write(client_fd, send_buff, strlen(send_buff));
+					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+
+					if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
+					{
+						perror("read error");
+						exit(1);
+					}
+					buff[n] = '\0';
+					write(STDOUT_FILENO, buff, strlen(buff));
+					write(STDOUT_FILENO, "\n", 1);
+
+					if (RNTO(buff, tmp_buff) < 0)
+						sprintf(send_buff, "550 %s: Can't be renamed.\n", tmp_buff);
+					else
+						strcpy(send_buff, "250 RNTO command succeeds.\n");
+					write(client_fd, send_buff, strlen(send_buff));
+					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					continue;
 				}
 				else if (!strncmp(buff, "MKD", 3))
 				{
@@ -179,7 +263,7 @@ void main(int argc, char **argv)
 					if (MKD(buff, tmp_buff) < 0)
 						sprintf(send_buff, "550 %s: Can't create directory.\n", tmp_buff);
 					else
-						strcpy(send_buff, "MKD command performed successfully.\n");
+						strcpy(send_buff, "250 MKD command performed successfully.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					continue;
@@ -190,7 +274,7 @@ void main(int argc, char **argv)
 					if (RMD(buff, tmp_buff) < 0)
 						sprintf(send_buff, "550 %s: Can't remove directory.\n", tmp_buff);
 					else
-						strcpy(send_buff, "RMD command performed successfully.\n");
+						strcpy(send_buff, "250 RMD command performed successfully.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					continue;
@@ -237,13 +321,13 @@ void main(int argc, char **argv)
 
 				////// send FTP command result to client //////
 				memset(send_buff, 0, BUF_SIZE);
-				if (!strcmp(buff, "NLST"))
+				if (!strncmp(buff, "NLST", 4))
 					NLST(buff, send_buff);
-				else if (!strcmp(buff, "LIST"))
+				else if (!strncmp(buff, "LIST", 4))
 					LIST(buff, send_buff);
-				else if (!strcmp(buff, "RETR"))
+				else if (!strncmp(buff, "RETR", 4))
 					RETR(buff, send_buff);
-				else if (!strcmp(buff, "STOR"))
+				else if (!strncmp(buff, "STOR", 4))
 					STOR(buff, send_buff);
 				if (write(data_fd, send_buff, strlen(send_buff)) < 0)
 					strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
@@ -300,6 +384,111 @@ void convert_str_to_addr(char *str, struct sockaddr_in *addr)
     addr->sin_addr.s_addr = htonl(ip);
     addr->sin_port = htons(port);
     addr->sin_family = AF_INET;
+}
+
+////////////////////////////////////////////////////////////////////////
+// log_auth                                                           //
+// ================================================================== //
+// Input: int -> socket descriptor that is used for client connection //
+//                                                                    //
+// Output: int -> 0: failed to login                                  //
+//                1: success to login                                 //
+// Purpose: compare user name(ID), passwd read from client with       //
+//	        ID & passwd in the file 'passwd'                          //
+////////////////////////////////////////////////////////////////////////
+
+int log_auth(int connfd)
+{
+	char buff[BUF_SIZE];
+    char user[TMP_SIZE], passwd[TMP_SIZE];
+    int n, count = 1;
+
+    while (1)
+    {
+		if (count > 3)
+		{
+			strcpy(buff, "530 Failed to log-in.\n");
+			write(connfd, buff, strlen(buff));
+			write(STDOUT_FILENO, buff, strlen(buff));
+			return 0;
+		}
+
+		if ((n = read(connfd, user, MAX_BUF)) <= 0)
+			return 0;
+		user[n] = '\0';
+
+		if (user_match(user + 5, NULL) < 0)
+		{
+			strcpy(buff, "430 Invalid username or password.\n");
+			write(connfd, buff, strlen(buff));
+			write(STDOUT_FILENO, buff, strlen(buff));
+			count++;
+			continue;
+		}
+		else
+		{
+			strcpy(buff, "331 Password is required for username.\n");
+			write(connfd, buff, strlen(buff));
+			write(STDOUT_FILENO, buff, strlen(buff));
+		}
+
+		if ((n = read(connfd, passwd + 5, MAX_BUF)) <= 0)
+			return 0;
+		passwd[n] = '\0'; // read user name and passwd from client
+
+		if (user_match(user + 5, passwd + 5) < 0)
+		{
+			strcpy(buff, "430 Invalid username or password.\n");
+			write(connfd, buff, strlen(buff));
+			write(STDOUT_FILENO, buff, strlen(buff));
+			count++;
+			continue;
+		}
+		else
+		{
+			sprintf(buff, "230 User %s logged in.\n", user + 5);
+			write(connfd, buff, strlen(buff));
+			write(STDOUT_FILENO, buff, strlen(buff));
+			break;
+		}
+    }
+    return 1; // return success
+}
+
+////////////////////////////////////////////////////////////////////////
+// user_match                                                         //
+// ================================================================== //
+// Input: char * -> user name                                         //
+//		  char * -> passwd                                            //
+//                                                                    //
+// Output: int -> 0 : ID exist in 'passwd'                            //
+//                1 : ID & passwd exist in 'passwd'                   //
+//               -1 : NO ID & passwd in 'passwd'                      //
+// Purpose: compare ID & passwd(parameter) with ID & passwd in passwd //                       
+////////////////////////////////////////////////////////////////////////
+
+int user_match(char *user, char *passwd)
+{
+    FILE *fp;
+    struct passwd *pw;
+
+    fp = fopen("passwd", "r"); // open passwd file stream for read
+
+	while ((pw = fgetpwent(fp)) != NULL) // parsing passwd line(ID:passwd:uid:gid:...) and store to struct passwd
+	{
+		if (!strcmp(user, pw->pw_name) && !strcmp(passwd, pw->pw_passwd)) // correspond with passwd
+		{
+			fclose(fp);
+			return 1; // login success
+		}
+		if (!strcmp(user, pw->pw_name) && passwd == NULL)
+		{
+			fclose(fp);
+			return 0;
+		}
+	}
+	fclose(fp); // close file stream
+	return -1;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -706,7 +895,7 @@ int		PWD(char *buf, char *print_buf)
 	getcwd(path_buf, sizeof(path_buf));
 
 	//////////// print current working directory ////////////
-	sprintf(print_buf, "\"%s\" is current directory\n", path_buf);
+	strcpy(print_buf, path_buf);
 	return 0;
 }
 
@@ -935,7 +1124,7 @@ int		RMD(char *buf, char *print_buf)
 // Purpose: execute RNFR command(in cli: rename)                      //
 ////////////////////////////////////////////////////////////////////////
 
-int		RNFR(char *buf, char *print_buf)
+int		RNFR(char *buf, char *name_from)
 {
 	int		len = 0;
 
@@ -952,12 +1141,10 @@ int		RNFR(char *buf, char *print_buf)
 			return -1;
 	}
 
+	strcpy(name_from, split[1]);
 	////// if file doesn't exist, stat() will return -1  -> rename error //////
 	if (stat(split[1], &infor) == -1)
-	{
-		strcpy(print_buf, split[1]);
 		return -1;
-	}
 
 	return 0;
 }
@@ -972,7 +1159,7 @@ int		RNFR(char *buf, char *print_buf)
 // Purpose: execute RNTO command(in cli: rename)                      //
 ////////////////////////////////////////////////////////////////////////
 
-int		RNTO(char *buf, char *print_buf)
+int		RNTO(char *buf, char *name_from)
 {
 	int		len = 0;
 
@@ -991,17 +1178,11 @@ int		RNTO(char *buf, char *print_buf)
 
 	////// if file exist, stat() will return 0  -> rename error //////
 	if (!stat(split[1], &infor))
-	{
-		strcpy(print_buf, split[0]);
 		return -1;
-	}
 
 	////// if failed to rename, print error and exit //////
-	if (rename(split[1], split[3]) == -1)
-	{
-		strcpy(print_buf, split[0]);
+	if (rename(name_from, split[1]) == -1)
 		return -1;
-	}
 
 	return 0;
 }

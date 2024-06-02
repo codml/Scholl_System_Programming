@@ -26,6 +26,7 @@
 #define BUF_SIZE 4096
 
 void convert_addr_to_str(char *buf, struct sockaddr_in *addr);
+void log_in(int sockfd);
 
 void main(int argc, char **argv)
 {
@@ -73,6 +74,8 @@ void main(int argc, char **argv)
 		perror("connect error");
 		exit(1);
 	}
+
+	log_in(ctrlfd);
     while (1)
     {
 		memset(buff, 0, BUF_SIZE);
@@ -192,7 +195,7 @@ void main(int argc, char **argv)
 			close(ctrlfd);
 			return ;
 		}
-		if (!strncmp(cmd, "NLST", 4) || !strncmp(cmd, "RETR", 4) || !strncmp(cmd, "STOR", 4))
+		if (!strncmp(cmd, "NLST", 4) || !strncmp(cmd, "LIST", 4) || !strncmp(cmd, "RETR", 4) || !strncmp(cmd, "STOR", 4))
 		{
 			///// make random port num(10001 ~ 30000) /////
 			srand(time(NULL));
@@ -333,4 +336,79 @@ void convert_addr_to_str(char *buf, struct sockaddr_in *addr)
 
 	////// split port into bytes(2568 -> 10*2^8 + 8 -> 10,8)
 	sprintf(buf + strlen(buf), ",%d,%d", ntohs(addr->sin_port) >> 8, ntohs(addr->sin_port) & 0xFF);
+}
+
+////////////////////////////////////////////////////////////////////////
+// log_in                                                             //
+// ================================================================== //
+// Input: int -> socket descriptor that is used for server connection //
+//                                                                    //
+// Output: none                                                       //
+//                                                                    //
+// Purpose: check connection to server, send ID & passwd and receive  //
+//				answer from server                                    //
+////////////////////////////////////////////////////////////////////////
+
+void log_in(int sockfd)
+{
+    int n;
+    char tmp_buff[1024], *passwd, buf[BUF_SIZE];
+
+	// read REJECTION or ACCEPTED -> ip access //
+    if ((n = read(sockfd, buf, BUF_SIZE)) <= 0)
+	{
+		perror("Read error");
+		exit(1);
+	}
+    buf[n] = '\0';
+    if (!strncmp(buf, "431", 3)) // rejected from server
+    {
+		write(STDOUT_FILENO, buf, strlen(buf));
+		close(sockfd);
+		exit(1);
+	}
+	else // receive ACCEPTED
+		write(STDOUT_FILENO, buf, strlen(buf));
+
+    while (1) // read ID & passwd from STDIN_FILENO and send to server, then receive OK, FAIL, or DISCONNECTION //
+    {
+		write(STDOUT_FILENO, "Name : ", strlen("Name : "));
+		if ((n = read(STDIN_FILENO, tmp_buff, 1024)) <= 0) // if read failed, exit
+			exit(1);
+		tmp_buff[n - 1] = '\0'; // store input except line feed('\n')
+		sprintf(buf, "USER %s", tmp_buff);
+		if (write(sockfd, buf, strlen(buf)) <= 0) // write ID to server
+			exit(1);
+
+		if ((n = read(sockfd, buf, BUF_SIZE)) <= 0) // receive result from server
+			exit(1);
+		buf[n] = '\0';
+		write(STDOUT_FILENO, buf, strlen(buf));
+		if (!strncmp(buf, "430", 3))
+			continue;
+		else if (!strncmp(buf, "530", 3))
+		{
+			close(sockfd);
+			exit(0);
+		}
+
+		passwd = getpass("Passwd : "); // receive passwd encrypted
+		sprintf(buf, "PASS %s", passwd);
+		if (write(sockfd, buf, strlen(buf)) <= 0) // write to server
+			exit(1);
+
+		if ((n = read(sockfd, buf, BUF_SIZE)) <= 0) // receive result from server
+			exit(1);
+		buf[n] = '\0';
+        write(STDOUT_FILENO, buf, strlen(buf));
+		if (!strncmp(buf, "430", 3))
+			continue;
+		else if (!strncmp(buf, "530", 3))
+		{
+			close(sockfd);
+			exit(0);
+		}
+		else
+			return ;
+    }
 }
