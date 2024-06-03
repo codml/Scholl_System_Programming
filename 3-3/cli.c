@@ -281,6 +281,7 @@ void main(int argc, char **argv)
 			}
 			buff[n] = '\0';
 			write(STDOUT_FILENO, buff, strlen(buff));
+			write(STDOUT_FILENO, "\n", 1);
 			
 			//////////// if succeed to receive in server, print OK & #bytes ////////////
 			if (!strncmp(buff, "226", 3))

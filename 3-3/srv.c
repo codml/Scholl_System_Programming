@@ -25,14 +25,30 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #define BUF_SIZE 4096
 #define TMP_SIZE 1024
 #define MAX_BUF 4096
-#define FLAGS (O_RDWR | O_CREAT | O_TRUNC)
+
+#define FLAGS (O_RDWR | O_CREAT | O_APPEND)
 #define BIN_MODE (S_IXUSR | S_IXGRP | S_IXOTH)
 #define ASCII_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
-char	mode = 'b';
+
+#define START 0
+#define ILLEGAL 1
+#define AUTH 2
+#define FTP 3
+#define RESULT 4
+#define BYTE_RESULT 5
+#define DISCONNECT 6
+#define TERM 7
+
+char	*g_ip;
+int		g_port;
+char	g_user[256] = "None";
+char	g_mode = 'b';
+int		log_fd;
 
 void	sh_int(int sig);
 void	convert_str_to_addr(char *str, struct sockaddr_in *addr);
@@ -51,6 +67,7 @@ int		RNFR(char *buf, char *name_from);
 int		RNTO(char *buf, char *name_from);
 void	RETR(char *buf, char *print_buf);
 void	STOR(char *buf, char *print_buf);
+void	write_log(int fd, char *command, int bytes, int type);
 
 void main(int argc, char **argv)
 {
@@ -62,6 +79,8 @@ void main(int argc, char **argv)
 	FILE *fp_checkIP, *fp_motd;
 
 	signal(SIGINT, sh_int);
+	log_fd = open("logfile", FLAGS, ASCII_MODE);
+	write_log(log_fd, NULL, 0, START);
     ///// check the number of arguments /////
     if (argc != 2)
     {
@@ -97,6 +116,9 @@ void main(int argc, char **argv)
 			perror("control accept error");
 			raise(SIGINT);
 		}
+		
+		g_ip = inet_ntoa(client_addr.sin_addr);
+		g_port = ntohs(client_addr.sin_port);
 
 		pid_t pid;
 		if ((pid = fork()) < 0)
@@ -109,7 +131,10 @@ void main(int argc, char **argv)
 		{
 			close(server_fd);
 			if((fp_checkIP = fopen("access.txt", "r")) == NULL) // open access.txt file and check error
-				raise(SIGINT);
+			{
+				write_log(log_fd, NULL, 0, DISCONNECT);
+				exit(0);
+			}
 			
 			char buf[MAX_BUF]; // store a line from 'access.txt'
 			char cli_ip[MAX_BUF];
@@ -143,16 +168,25 @@ void main(int argc, char **argv)
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				close(client_fd);
-				continue;
+				write_log(log_fd, NULL, 0, ILLEGAL);
+				exit(0);
 			}
 			else // match
 			{
 				if ((fp_motd = fopen("motd", "r")) == NULL)
-					raise(SIGINT);
+				{
+					write_log(log_fd, NULL, 0, DISCONNECT);
+					exit(0);
+				}
 				if (fgets(tmp_buff, TMP_SIZE, fp_motd) == NULL)
-					raise(SIGINT);
+				{
+					write_log(log_fd, NULL, 0, DISCONNECT);
+					exit(0);
+				}
 				time_t t = time(NULL);
-				sprintf(send_buff, tmp_buff, ctime(&t));
+				char tmp[256];
+				strftime(tmp, 256, "%a %b %d %X %% %Z", localtime(&t));
+				sprintf(send_buff, tmp_buff, tmp);
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				fclose(fp_motd);
@@ -161,7 +195,8 @@ void main(int argc, char **argv)
 			if (log_auth(client_fd) == 0)
 			{
 				close(client_fd);
-				raise(SIGINT);
+				write_log(log_fd, NULL, 0, DISCONNECT);
+				exit(0);
 			}
 
 			/////////// read FTP command & send result via data connection ///////////
@@ -171,11 +206,13 @@ void main(int argc, char **argv)
 				if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 				{
 					perror("read error");
-					raise(SIGINT);
+					write_log(log_fd, NULL, 0, DISCONNECT);
+					exit(0);
 				}
 				buff[n] = '\0';
 				write(STDOUT_FILENO, buff, strlen(buff));
 				write(STDOUT_FILENO, "\n", 1);
+				write_log(log_fd, buff, 0, FTP);
 
 				//////// if received QUIT, send '221 Goodbye' and close connection ///////
 				if (!strcmp(buff, "QUIT"))
@@ -184,11 +221,14 @@ void main(int argc, char **argv)
 					if (write(client_fd, send_buff, strlen(send_buff)) < 0)
 					{
 						perror("write error");
-						raise(SIGINT);
+						write_log(log_fd, NULL, 0, DISCONNECT);
+						exit(0);
 					}
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					close(client_fd);
-					raise(SIGINT);
+					write_log(log_fd, NULL, 0, DISCONNECT);
+					exit(0);
 				}
 				else if (!strncmp(buff, "PWD", 3))
 				{
@@ -199,6 +239,7 @@ void main(int argc, char **argv)
 						sprintf(send_buff, "257 \"%s\" is current directory.\n", tmp_buff);
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "CWD", 3))
@@ -210,6 +251,7 @@ void main(int argc, char **argv)
 						strcpy(send_buff, "250 CWD command succeeds.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "CDUP", 4))
@@ -221,6 +263,7 @@ void main(int argc, char **argv)
 						strcpy(send_buff, "250 CDUP command succeeds.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "DELE", 4))
@@ -232,6 +275,7 @@ void main(int argc, char **argv)
 						strcpy(send_buff, "250 DELE command performed successfully.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "RNFR", 4))
@@ -241,20 +285,24 @@ void main(int argc, char **argv)
 						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
 						write(client_fd, send_buff, strlen(send_buff));
 						write(STDOUT_FILENO, send_buff, strlen(send_buff));
+						write_log(log_fd, send_buff, 0, RESULT);
 						continue;
 					}
 					strcpy(send_buff, "350 File exists, ready to rename.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 
 					if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 					{
 						perror("read error");
-						raise(SIGINT);
+						write_log(log_fd, NULL, 0, DISCONNECT);
+						exit(0);
 					}
 					buff[n] = '\0';
 					write(STDOUT_FILENO, buff, strlen(buff));
 					write(STDOUT_FILENO, "\n", 1);
+					write_log(log_fd, buff, 0, FTP);
 
 					if (RNTO(buff, tmp_buff) < 0)
 						sprintf(send_buff, "550 %s: Can't be renamed.\n", tmp_buff);
@@ -262,6 +310,7 @@ void main(int argc, char **argv)
 						strcpy(send_buff, "250 RNTO command succeeds.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "MKD", 3))
@@ -273,6 +322,7 @@ void main(int argc, char **argv)
 						strcpy(send_buff, "250 MKD command performed successfully.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "RMD", 3))
@@ -284,23 +334,25 @@ void main(int argc, char **argv)
 						strcpy(send_buff, "250 RMD command performed successfully.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "TYPE", 4))
 				{
 					if (buff[5] == 'I')
 					{
-						mode = 'b';
+						g_mode = 'b';
 						strcpy(send_buff, "201 Type set to I.\n");
 						
 					}
 					else if (buff[5] == 'A')
 					{
-						mode = 'a';
+						g_mode = 'a';
 						strcpy(send_buff, "201 Type set to A.\n");
 					}
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 
@@ -314,30 +366,36 @@ void main(int argc, char **argv)
 					strcpy(send_buff, "550 Failed to access.\n");
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write_log(log_fd, send_buff, 0, RESULT);
 					close(data_fd);
 					close(client_fd);
-					raise(SIGINT);
+					write_log(log_fd, NULL, 0, DISCONNECT);
+					exit(0);
 				}
 
 				////// send the success message to client //////
 				strcpy(send_buff, "200 PORT command successful\n");
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
+				write_log(log_fd, send_buff, 0, RESULT);
 				
 				///////// read NLST or LIST or RETR or STOR from client ////////////
 				if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
 				{
 					perror("read error");
-					raise(SIGINT);
+					write_log(log_fd, NULL, 0, DISCONNECT);
+					exit(0);
 				}
 				buff[n] = '\0';
 				write(STDOUT_FILENO, buff, strlen(buff));
 				write(STDOUT_FILENO, "\n", 1);
+				write_log(log_fd, buff, 0, FTP);
 
 				////// send client that server will send FTP result via data connection ///////
 				strcpy(send_buff, "150 Opening data connection for directory list\n");
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
+				write_log(log_fd, send_buff, 0, RESULT);
 
 				////// send FTP command result to client //////
 				memset(send_buff, 0, BUF_SIZE);
@@ -349,12 +407,17 @@ void main(int argc, char **argv)
 					RETR(buff, send_buff);
 				else if (!strncmp(buff, "STOR", 4))
 					STOR(buff, send_buff);
-				if (write(data_fd, send_buff, strlen(send_buff)) < 0)
-					strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
+				if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
+					strcpy(send_buff, "550 Failed transmission."); // if failed, send Fail code
 				else
-					strcpy(send_buff, "226 Result is sent successfully.\n"); // if succeed, send Success code
+					strcpy(send_buff, "226 Result is sent successfully."); // if succeed, send Success code
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
+				write(STDOUT_FILENO, "\n", 1);
+				if (!strncmp(send_buff, "226", 3))
+					write_log(log_fd, send_buff, n, BYTE_RESULT);
+				else
+					write_log(log_fd, send_buff, 0, RESULT);
 				close(data_fd);
 			}
 		}
@@ -375,7 +438,8 @@ void main(int argc, char **argv)
 
 void sh_int(int sig)
 {
-	while (wait(NULL) != -1); // if all of child terminated, parent terminate
+	write_log(log_fd, NULL, 0, TERM);
+	close(log_fd);
 	exit(0);
 }
 
@@ -446,6 +510,8 @@ int log_auth(int connfd)
 			strcpy(buff, "530 Failed to log-in.\n");
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
+			strcpy(g_user, user);
+			write_log(log_fd, NULL, 0, ILLEGAL);
 			return 0;
 		}
 
@@ -489,6 +555,8 @@ int log_auth(int connfd)
 			sprintf(buff, "230 User %s logged in.\n", user + 5);
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
+			strcpy(g_user, user + 5);
+			write_log(log_fd, NULL, 0, AUTH);
 			break;
 		}
     }
@@ -1236,4 +1304,43 @@ void	RETR(char *buf, char *print_buf)
 void	STOR(char *buf, char *print_buf)
 {
 
+}
+
+void	write_log(int fd, char *command, int bytes, int type)
+{
+	time_t	t;
+	char	str[TMP_SIZE];
+	char	buf[BUF_SIZE];
+
+	memset(buf, 0, BUF_SIZE);
+	t = time(NULL);
+	strftime(str, TMP_SIZE, "%c", localtime(&t));
+	switch (type)
+	{
+		case START:
+			sprintf(buf, "%s Server is started\n\n", str);
+			break;
+		case ILLEGAL:
+			sprintf(buf, "%s [%s:%d] %s LOG_FAIL\n\n", str, g_ip, g_port, g_user);
+			break;
+		case AUTH:
+			sprintf(buf, "%s [%s:%d] %s LOG_IN\n\n", str, g_ip, g_port, g_user);
+			break;
+		case FTP:
+			sprintf(buf, "%s [%s:%d] %s %s\n\n", str, g_ip, g_port, g_user, command);
+			break;
+		case RESULT:
+			sprintf(buf, "%s [%s:%d] %s %s\n", str, g_ip, g_port, g_user, command);
+			break;
+		case BYTE_RESULT:
+			sprintf(buf, "%s [%s:%d] %s %s | %d bytes\n\n", str, g_ip, g_port, g_user, command, bytes);
+			break;
+		case DISCONNECT:
+			sprintf(buf, "%s [%s:%d] %s LOG_OUT\n\n", str, g_ip, g_port, g_user);
+			break;
+		case TERM:
+			sprintf(buf, "%s Server is terminated\n\n", str);
+			break;
+	}
+	write(fd, buf, strlen(buf));
 }

@@ -1,0 +1,46 @@
+Mon Jun  3 17:30:23 2024 Server is started
+
+Mon Jun  3 17:30:34 2024 [127.0.0.1:60598] gang LOG_IN
+
+Mon Jun  3 17:30:40 2024 [127.0.0.1:60598] gang PORT 127,0,0,1,42,248
+
+Mon Jun  3 17:30:40 2024 [127.0.0.1:60598] gang 200 PORT command successful
+
+Mon Jun  3 17:30:40 2024 [127.0.0.1:60598] gang NLST -al ~
+
+Mon Jun  3 17:30:40 2024 [127.0.0.1:60598] gang 150 Opening data connection for directory list
+
+Mon Jun  3 17:30:40 2024 [127.0.0.1:60598] gang 226 Result is sent successfully. | 2554 bytes
+
+Mon Jun  3 17:31:00 2024 [127.0.0.1:39356] taewan LOG_IN
+
+Mon Jun  3 17:31:08 2024 [127.0.0.1:39356] taewan CWD ~/Downloads
+
+Mon Jun  3 17:31:08 2024 [127.0.0.1:39356] taewan 250 CWD command succeeds.
+
+Mon Jun  3 17:31:17 2024 [127.0.0.1:39356] taewan CWD ../system_programming_1/3-3
+
+Mon Jun  3 17:31:17 2024 [127.0.0.1:39356] taewan 250 CWD command succeeds.
+
+Mon Jun  3 17:31:20 2024 [127.0.0.1:39356] taewan MKD a
+
+Mon Jun  3 17:31:20 2024 [127.0.0.1:39356] taewan 250 MKD command performed successfully.
+
+Mon Jun  3 17:31:22 2024 [127.0.0.1:39356] taewan RMD a
+
+Mon Jun  3 17:31:22 2024 [127.0.0.1:39356] taewan 250 RMD command performed successfully.
+
+Mon Jun  3 17:31:24 2024 [127.0.0.1:39356] taewan QUIT
+
+Mon Jun  3 17:31:24 2024 [127.0.0.1:39356] taewan 221 Goodbye.
+
+Mon Jun  3 17:31:24 2024 [127.0.0.1:39356] taewan LOG_OUT
+
+Mon Jun  3 17:31:27 2024 [127.0.0.1:60598] gang QUIT
+
+Mon Jun  3 17:31:27 2024 [127.0.0.1:60598] gang 221 Goodbye.
+
+Mon Jun  3 17:31:27 2024 [127.0.0.1:60598] gang LOG_OUT
+
+Mon Jun  3 17:31:28 2024 Server is terminated
+
