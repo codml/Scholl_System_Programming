@@ -191,6 +191,7 @@ void main(int argc, char **argv)
 				strcpy(tmp_buff, send_buff);
 				strcpy(send_buff, "220 ");
 				strcat(send_buff, tmp_buff);
+				strcat(send_buff, " ready.\n");
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				fclose(fp_motd);
@@ -404,25 +405,94 @@ void main(int argc, char **argv)
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				write_log(log_fd, send_buff, 0, RESULT);
 
-				////// send FTP command result to client //////
-				memset(send_buff, 0, BUF_SIZE);
-				if (!strncmp(buff, "NLST", 4))
-					n = NLST(buff, send_buff);
-				else if (!strncmp(buff, "LIST", 4))
-					n = LIST(buff, send_buff);
-				else if (!strncmp(buff, "RETR", 4))
-					n = RETR(buff, send_buff);
-				else if (!strncmp(buff, "STOR", 4))
-					n = STOR(buff, send_buff);
-				if (n < 0)
+				if (!strncmp(buff, "RETR", 4) || !strncmp(buff, "STOR", 4))
 				{
-					write(data_fd, "", 0);
-					strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
+					char file_name[BUF_SIZE];
+					char cmd[5];
+					struct stat infor;
+
+					strncpy(cmd, buff, 4);
+					cmd[4] = '\0';
+					strcpy(file_name, buff + 5);
+					if ((stat(file_name, &infor) == 0 && !strncmp(buff, "RETR", 4))
+						|| (stat(file_name, &infor) == -1 && !strncmp(buff, "STOR", 4)))
+						write(client_fd, file_name, strlen(file_name));
+					else
+					{
+						strcpy(send_buff, "550 Failed transmission.\n");
+						write(client_fd, send_buff, strlen(send_buff));
+						write(STDOUT_FILENO, send_buff, strlen(send_buff));
+						write_log(log_fd, send_buff, 0, RESULT);
+						close(data_fd);
+						continue;
+					}
+
+					if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
+					{
+						write_log(log_fd, NULL, 0, DISCONNECT);
+						exit(0);
+					}
+					buff[n] = '\0';
+					if (!strcmp(buff, "NO"))
+					{
+						strcpy(send_buff, "550 Failed transmission.\n");
+						write(client_fd, send_buff, strlen(send_buff));
+						write(STDOUT_FILENO, send_buff, strlen(send_buff));
+						write_log(log_fd, send_buff, 0, RESULT);
+						close(data_fd);
+						continue;
+					}
+					else
+						write(client_fd, "OK", 2);
+					if (!strcmp(cmd, "RETR"))
+					{
+						int file_fd = open(file_name, O_RDONLY);
+						n = read(file_fd, send_buff, BUF_SIZE);
+						send_buff[n] = '\0';
+						close(file_fd);
+
+						if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
+						{
+							perror("write error");
+							exit(1);
+						}
+					}
+					else
+					{
+						if ((n = read(data_fd, buff, BUF_SIZE)) < 0)
+						{
+							perror("read error");
+							exit(1);
+						}
+						int file_fd = open(file_name, O_WRONLY | O_CREAT);
+						write(file_fd, buff, strlen(buff));
+						close(file_fd);
+					}
+					strcpy(send_buff, "226 Complete transmission.");
+					write(client_fd, send_buff, strlen(send_buff));
+					write(STDOUT_FILENO, send_buff, strlen(send_buff));
+					write(STDOUT_FILENO, "\n", 1);
+					write_log(log_fd, send_buff, n, BYTE_RESULT);
+					close(data_fd);
 				}
-				else if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
-					strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
 				else
-					strcpy(send_buff, "226 Complete transmission."); // if succeed, send Success code
+				{
+					////// send FTP command result to client //////
+					memset(send_buff, 0, BUF_SIZE);
+					if (!strncmp(buff, "NLST", 4))
+						n = NLST(buff, send_buff);
+					else if (!strncmp(buff, "LIST", 4))
+						n = LIST(buff, send_buff);
+					if (n < 0)
+					{
+						write(data_fd, "", 0);
+						strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
+					}
+					else if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
+						strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
+					else
+						strcpy(send_buff, "226 Complete transmission."); // if succeed, send Success code
+				}
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, "\n", 1);
@@ -1315,47 +1385,12 @@ int		RNTO(char *buf, char *name_from)
 
 int		RETR(char *buf, char *print_buf)
 {
-	int		from_fd, to_fd;
-	int		len = 0;
-
-	char	*split[256];
-	char	*ptr;
-	char	tmp_buf[MAX_BUF];
-	char	from_buf[BUF_SIZE];
-	struct stat infor;
-
-	///////////// split a command by space && stored in split[] ////////////
-	strcpy(tmp_buf, buf);
-	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
-	{
-		split[len++] = ptr;
-		if (ptr[0] == '-')
-			return -1;
-	}
-	if (len != 2)
-		return -1;
-	
-	if (g_mode == 'b')
-	{
-		if ((from_fd = open(split[1], O_RDONLY, BIN_MODE)) < 0)
-			return -1;
-		len = read(from_fd, from_buf, BUF_SIZE);
-		close(from_fd);
-	}
-	else
-	{
-		if ((from_fd = open(split[1], O_RDONLY, ASCII_MODE)) < 0)
-			return -1;
-		len = read(from_fd, from_buf, BUF_SIZE - 1);
-		from_buf[len] = '\0';
-		close(from_fd);
-	}
-	
+	return 0;
 }
 
 int		STOR(char *buf, char *print_buf)
 {
-
+	return 0;
 }
 
 void	write_log(int fd, char *command, int bytes, int type)

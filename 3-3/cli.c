@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #define BUF_SIZE 4096
 
@@ -261,38 +262,122 @@ void main(int argc, char **argv)
 			buff[n] = '\0';
 			write(STDOUT_FILENO, buff, strlen(buff));
 
-			/////// read command result from server via data connection ///////
-			if ((n = read(dataconfd, buff, BUF_SIZE)) < 0)
+			if (!strncmp(cmd, "RETR", 4) || !strncmp(cmd, "STOR", 4))
 			{
-				perror("read error");
-				exit(1);
-			}
-			buff[n] = '\0';
+				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+				{
+					perror("read error");
+					exit(1);
+				}
+				buff[n] = '\0';
 
-			/////// print the result and store bytes //////
-			write(STDOUT_FILENO, buff, strlen(buff));
-			bytes = n;
+				if (!strncmp(buff, "550", 3))
+				{
+					write(STDOUT_FILENO, buff, strlen(buff));
+					close(dataconfd);
+					continue;
+				}
 
-			/////// read '226....' from server //////
-			if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
-			{
-				perror("read error");
-				exit(1);
-			}
-			buff[n] = '\0';
+				struct stat infor;
+				char file_name[BUF_SIZE];
+				if ((stat(buff, &infor) == -1 && !strncmp(cmd, "RETR", 4))
+						|| (stat(buff, &infor) == 0 && !strncmp(cmd, "STOR", 4)))
+					write(ctrlfd, "OK", 2);
+				else
+					write(ctrlfd, "NO", 2);
 
-			write(STDOUT_FILENO, buff, strlen(buff));
-			
-			//////////// if succeed to receive in server, print OK & #bytes ////////////
-			if (!strncmp(buff, "226", 3))
-			{
-				write(STDOUT_FILENO, "\n", 1);
-				sprintf(buff, "OK. %d bytes is received.\n", bytes);
+				strcpy(file_name, buff);
+
+				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+				{
+					perror("read error");
+					exit(1);
+				}
+				buff[n] = '\0';
+				
+				if (!strncmp(buff, "550", 3))
+				{
+					write(STDOUT_FILENO, buff, strlen(buff));
+					close(dataconfd);
+					continue;
+				}
+
+				if (!strncmp(cmd, "RETR", 4))
+				{
+					if ((n = read(dataconfd, buff, BUF_SIZE)) < 0)
+					{
+						perror("read error");
+						exit(1);
+					}
+					int file_fd = open(file_name, O_WRONLY | O_CREAT);
+					write(file_fd, buff, strlen(buff));
+					close(file_fd);
+				}
+				else
+				{
+					int file_fd = open(file_name, O_RDONLY);
+					n = read(file_fd, buff, BUF_SIZE);
+					buff[n] = '\0';
+					close(file_fd);
+
+					if ((n = write(dataconfd, buff, strlen(buff))) < 0)
+					{
+						perror("write error");
+						exit(1);
+					}
+				}
+				bytes = n;
+				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+				{
+					perror("read error");
+					exit(1);
+				}
+				buff[n] = '\0';
+
 				write(STDOUT_FILENO, buff, strlen(buff));
+				write(STDOUT_FILENO, "\n", 1);
+				if (!strncmp(cmd, "RETR", 4))
+					sprintf(buff, "OK. %d bytes is received.\n", bytes);
+				else
+					sprintf(buff, "OK. %d bytes is sent.\n", bytes);
+				write(STDOUT_FILENO, buff, strlen(buff));
+				close(dataconfd);
 			}
+			else
+			{
+				/////// read command result from server via data connection ///////
+				if ((n = read(dataconfd, buff, BUF_SIZE)) < 0)
+				{
+					perror("read error");
+					exit(1);
+				}
+				buff[n] = '\0';
 
-			////// close data connection //////
-			close(dataconfd);
+				/////// print the result and store bytes //////
+				write(STDOUT_FILENO, buff, strlen(buff));
+				bytes = n;
+
+				/////// read '226....' from server //////
+				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+				{
+					perror("read error");
+					exit(1);
+				}
+				buff[n] = '\0';
+
+				write(STDOUT_FILENO, buff, strlen(buff));
+				
+				//////////// if succeed to receive in server, print OK & #bytes ////////////
+				if (!strncmp(buff, "226", 3))
+				{
+					write(STDOUT_FILENO, "\n", 1);
+					sprintf(buff, "OK. %d bytes is received.\n", bytes);
+					write(STDOUT_FILENO, buff, strlen(buff));
+				}
+
+				////// close data connection //////
+				close(dataconfd);
+			}
 		}
 		else
 		{

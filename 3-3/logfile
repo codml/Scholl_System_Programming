@@ -88,3 +88,105 @@ Mon Jun  3 20:31:39 2024 Server is terminated
 
 Mon Jun  3 20:31:39 2024 Server is terminated
 
+Mon Jun  3 22:44:14 2024 Server is started
+
+Mon Jun  3 22:44:23 2024 [127.0.0.1:39872] taewan LOG_IN
+
+Mon Jun  3 22:44:24 2024 [127.0.0.1:39872] taewan PORT 127,0,0,1,217,81
+
+Mon Jun  3 22:44:24 2024 [127.0.0.1:39872] taewan 200 PORT command successful
+
+Mon Jun  3 22:44:24 2024 [127.0.0.1:39872] taewan NLST
+
+Mon Jun  3 22:44:24 2024 [127.0.0.1:39872] taewan 150 Opening data connection for directory list
+
+Mon Jun  3 22:44:24 2024 [127.0.0.1:39872] taewan 226 Complete transmission. | 56 bytes
+
+Mon Jun  3 22:44:35 2024 [127.0.0.1:39872] taewan PORT 127,0,0,1,205,88
+
+Mon Jun  3 22:44:35 2024 [127.0.0.1:39872] taewan 200 PORT command successful
+
+Mon Jun  3 22:44:35 2024 [127.0.0.1:39872] taewan STOR abc
+
+Mon Jun  3 22:44:35 2024 [127.0.0.1:39872] taewan 150 Opening binary mode data connection for abc.
+
+Mon Jun  3 22:44:35 2024 [127.0.0.1:39872] taewan 226 Complete transmission. | 49 bytes
+
+Mon Jun  3 22:44:35 2024 [127.0.0.1:39872] taewan 226 Complete transmission. | 49 bytes
+
+Mon Jun  3 22:44:53 2024 [127.0.0.1:39872] taewan QUIT
+
+Mon Jun  3 22:44:53 2024 [127.0.0.1:39872] taewan 221 Goodbye.
+
+Mon Jun  3 22:44:53 2024 [127.0.0.1:39872] taewan LOG_OUT
+[total service time : 30 sec]
+
+Mon Jun  3 22:44:54 2024 Server is terminated
+
+Mon Jun  3 22:45:24 2024 Server is started
+
+Mon Jun  3 22:45:26 2024 Server is started
+
+Mon Jun  3 22:45:33 2024 [127.0.0.1:44816] nono LOG_IN
+
+Mon Jun  3 22:45:36 2024 [127.0.0.1:44816] nono PORT 127,0,0,1,178,121
+
+Mon Jun  3 22:45:36 2024 [127.0.0.1:44816] nono 200 PORT command successful
+
+Mon Jun  3 22:45:36 2024 [127.0.0.1:44816] nono RETR abc
+
+Mon Jun  3 22:45:36 2024 [127.0.0.1:44816] nono 150 Opening binary mode data connection for abc.
+
+Mon Jun  3 22:45:36 2024 [127.0.0.1:44816] nono 226 Complete transmission. | 49 bytes
+
+Mon Jun  3 22:45:36 2024 [127.0.0.1:44816] nono 226 Complete transmission. | 49 bytes
+
+Mon Jun  3 22:45:56 2024 [127.0.0.1:44816] nono PORT 127,0,0,1,53,213
+
+Mon Jun  3 22:45:56 2024 [127.0.0.1:44816] nono 200 PORT command successful
+
+Mon Jun  3 22:45:56 2024 [127.0.0.1:44816] nono RETR abc
+
+Mon Jun  3 22:45:56 2024 [127.0.0.1:44816] nono 150 Opening binary mode data connection for abc.
+
+Mon Jun  3 22:45:56 2024 [127.0.0.1:44816] nono 550 Failed transmission.
+
+Mon Jun  3 22:46:02 2024 [127.0.0.1:44816] nono PORT 127,0,0,1,162,215
+
+Mon Jun  3 22:46:02 2024 [127.0.0.1:44816] nono 200 PORT command successful
+
+Mon Jun  3 22:46:02 2024 [127.0.0.1:44816] nono STOR abc
+
+Mon Jun  3 22:46:02 2024 [127.0.0.1:44816] nono 150 Opening binary mode data connection for abc.
+
+Mon Jun  3 22:46:02 2024 [127.0.0.1:44816] nono 550 Failed transmission.
+
+Mon Jun  3 22:50:04 2024 [127.0.0.1:44816] nono DELE abc
+
+Mon Jun  3 22:50:04 2024 [127.0.0.1:44816] nono 250 DELE command performed successfully.
+
+Mon Jun  3 22:50:10 2024 [127.0.0.1:44816] nono CDUP
+
+Mon Jun  3 22:50:10 2024 [127.0.0.1:44816] nono 250 CDUP command succeeds.
+
+Mon Jun  3 22:50:13 2024 [127.0.0.1:44816] nono DELE abc
+
+Mon Jun  3 22:50:13 2024 [127.0.0.1:44816] nono 250 DELE command performed successfully.
+
+Mon Jun  3 22:50:15 2024 [127.0.0.1:44816] nono CWD 3-3
+
+Mon Jun  3 22:50:15 2024 [127.0.0.1:44816] nono 250 CWD command succeeds.
+
+Mon Jun  3 22:50:17 2024 [127.0.0.1:44816] nono PWD
+
+Mon Jun  3 22:50:17 2024 [127.0.0.1:44816] nono 257 "/home/kw2020202034/system_programming_1/3-3" is current directory.
+
+Mon Jun  3 22:50:18 2024 [127.0.0.1:44816] nono QUIT
+
+Mon Jun  3 22:50:18 2024 [127.0.0.1:44816] nono 221 Goodbye.
+
+Mon Jun  3 22:50:18 2024 [127.0.0.1:44816] nono LOG_OUT
+[total service time : 285 sec]
+
+Mon Jun  3 22:50:19 2024 Server is terminated
+
