@@ -66,8 +66,6 @@ int		DELE(char *buf, char *print_buf);
 int		RMD(char *buf, char *print_buf);
 int		RNFR(char *buf, char *name_from);
 int		RNTO(char *buf, char *name_from);
-int		RETR(char *buf, char *print_buf);
-int		STOR(char *buf, char *print_buf);
 void	write_log(int fd, char *command, int bytes, int type);
 
 void main(int argc, char **argv)
@@ -1380,16 +1378,6 @@ int		RNTO(char *buf, char *name_from)
 	if (rename(name_from, split[1]) == -1)
 		return -1;
 
-	return 0;
-}
-
-int		RETR(char *buf, char *print_buf)
-{
-	return 0;
-}
-
-int		STOR(char *buf, char *print_buf)
-{
 	return 0;
 }
 
