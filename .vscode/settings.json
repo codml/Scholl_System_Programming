@@ -6,6 +6,7 @@
         "socket.h": "c",
         "stdio.h": "c",
         "pwd.h": "c",
-        "grp.h": "c"
+        "grp.h": "c",
+        "stat.h": "c"
     }
 }

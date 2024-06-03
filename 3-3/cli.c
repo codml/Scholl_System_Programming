@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 
 #define BUF_SIZE 4096
+#define MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
 void convert_addr_to_str(char *buf, struct sockaddr_in *addr);
 void log_in(int sockfd);
@@ -309,13 +310,13 @@ void main(int argc, char **argv)
 						perror("read error");
 						exit(1);
 					}
-					int file_fd = open(file_name, O_WRONLY | O_CREAT);
+					int file_fd = open(file_name, O_WRONLY | O_CREAT, MODE);
 					write(file_fd, buff, strlen(buff));
 					close(file_fd);
 				}
 				else
 				{
-					int file_fd = open(file_name, O_RDONLY);
+					int file_fd = open(file_name, O_RDONLY, MODE);
 					n = read(file_fd, buff, BUF_SIZE);
 					buff[n] = '\0';
 					close(file_fd);

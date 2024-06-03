@@ -190,3 +190,111 @@ Mon Jun  3 22:50:18 2024 [127.0.0.1:44816] nono LOG_OUT
 
 Mon Jun  3 22:50:19 2024 Server is terminated
 
+Tue Jun  4 00:45:05 2024 Server is started
+
+Tue Jun  4 00:45:17 2024 [127.0.0.1:58442] taewan LOG_IN
+
+Tue Jun  4 00:45:19 2024 [127.0.0.1:58442] taewan PORT 127,0,0,1,148,206
+
+Tue Jun  4 00:45:19 2024 [127.0.0.1:58442] taewan 200 PORT command successful
+
+Tue Jun  4 00:45:19 2024 [127.0.0.1:58442] taewan NLST
+
+Tue Jun  4 00:45:19 2024 [127.0.0.1:58442] taewan 150 Opening data connection for directory list
+
+Tue Jun  4 00:45:19 2024 [127.0.0.1:58442] taewan 226 Complete transmission. | 56 bytes
+
+Tue Jun  4 00:45:32 2024 [127.0.0.1:58442] taewan PWD
+
+Tue Jun  4 00:45:32 2024 [127.0.0.1:58442] taewan 257 "/home/kw2020202034/system_programming_1/3-3" is current directory.
+
+Tue Jun  4 00:45:37 2024 [127.0.0.1:58442] taewan PORT 127,0,0,1,69,135
+
+Tue Jun  4 00:45:37 2024 [127.0.0.1:58442] taewan 200 PORT command successful
+
+Tue Jun  4 00:45:37 2024 [127.0.0.1:58442] taewan RETR Makefile
+
+Tue Jun  4 00:45:37 2024 [127.0.0.1:58442] taewan 150 Opening binary mode data connection for Makefile.
+
+Tue Jun  4 00:45:37 2024 [127.0.0.1:58442] taewan 226 Complete transmission. | 98 bytes
+
+Tue Jun  4 00:45:37 2024 [127.0.0.1:58442] taewan 226 Complete transmission. | 98 bytes
+
+Tue Jun  4 00:45:50 2024 [127.0.0.1:58442] taewan TYPE A
+
+Tue Jun  4 00:45:50 2024 [127.0.0.1:58442] taewan 201 Type set to A.
+
+Tue Jun  4 00:45:55 2024 [127.0.0.1:58442] taewan PORT 127,0,0,1,233,133
+
+Tue Jun  4 00:45:55 2024 [127.0.0.1:58442] taewan 200 PORT command successful
+
+Tue Jun  4 00:45:55 2024 [127.0.0.1:58442] taewan STOR abc
+
+Tue Jun  4 00:45:55 2024 [127.0.0.1:58442] taewan 150 Opening ascii mode data connection for abc.
+
+Tue Jun  4 00:45:55 2024 [127.0.0.1:58442] taewan 226 Complete transmission. | 45 bytes
+
+Tue Jun  4 00:45:55 2024 [127.0.0.1:58442] taewan 226 Complete transmission. | 45 bytes
+
+Tue Jun  4 00:46:02 2024 [127.0.0.1:58442] taewan QUIT
+
+Tue Jun  4 00:46:02 2024 [127.0.0.1:58442] taewan 221 Goodbye.
+
+Tue Jun  4 00:46:02 2024 [127.0.0.1:58442] taewan LOG_OUT
+[total service time : 45 sec]
+
+Tue Jun  4 00:46:05 2024 Server is terminated
+
+Tue Jun  4 00:52:15 2024 Server is started
+
+Tue Jun  4 00:52:25 2024 [127.0.0.1:44890] nono LOG_IN
+
+Tue Jun  4 00:52:32 2024 [127.0.0.1:44890] nono PORT 127,0,0,1,206,103
+
+Tue Jun  4 00:52:32 2024 [127.0.0.1:44890] nono 200 PORT command successful
+
+Tue Jun  4 00:52:32 2024 [127.0.0.1:44890] nono NLST -la /dev
+
+Tue Jun  4 00:52:32 2024 [127.0.0.1:44890] nono 150 Opening data connection for directory list
+
+Tue Jun  4 00:52:32 2024 [127.0.0.1:44890] nono 226 Complete transmission. | 4057 bytes
+
+Tue Jun  4 00:52:48 2024 [127.0.0.1:44890] nono PORT 127,0,0,1,123,204
+
+Tue Jun  4 00:52:48 2024 [127.0.0.1:44890] nono 200 PORT command successful
+
+Tue Jun  4 00:52:48 2024 [127.0.0.1:44890] nono RETR passwd
+
+Tue Jun  4 00:52:48 2024 [127.0.0.1:44890] nono 150 Opening binary mode data connection for passwd.
+
+Tue Jun  4 00:52:48 2024 [127.0.0.1:44890] nono 226 Complete transmission. | 94 bytes
+
+Tue Jun  4 00:52:55 2024 [127.0.0.1:44890] nono PORT 127,0,0,1,191,207
+
+Tue Jun  4 00:52:55 2024 [127.0.0.1:44890] nono 200 PORT command successful
+
+Tue Jun  4 00:52:55 2024 [127.0.0.1:44890] nono STOR Makefile
+
+Tue Jun  4 00:52:55 2024 [127.0.0.1:44890] nono 150 Opening binary mode data connection for Makefile.
+
+Tue Jun  4 00:52:55 2024 [127.0.0.1:44890] nono 550 Failed transmission.
+
+Tue Jun  4 00:53:00 2024 [127.0.0.1:44890] nono PORT 127,0,0,1,161,204
+
+Tue Jun  4 00:53:00 2024 [127.0.0.1:44890] nono 200 PORT command successful
+
+Tue Jun  4 00:53:00 2024 [127.0.0.1:44890] nono STOR abc
+
+Tue Jun  4 00:53:00 2024 [127.0.0.1:44890] nono 150 Opening binary mode data connection for abc.
+
+Tue Jun  4 00:53:00 2024 [127.0.0.1:44890] nono 226 Complete transmission. | 45 bytes
+
+Tue Jun  4 00:53:02 2024 [127.0.0.1:44890] nono QUIT
+
+Tue Jun  4 00:53:02 2024 [127.0.0.1:44890] nono 221 Goodbye.
+
+Tue Jun  4 00:53:02 2024 [127.0.0.1:44890] nono LOG_OUT
+[total service time : 37 sec]
+
+Tue Jun  4 00:53:04 2024 Server is terminated
+

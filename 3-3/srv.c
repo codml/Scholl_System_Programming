@@ -462,7 +462,7 @@ void main(int argc, char **argv)
 							perror("read error");
 							exit(1);
 						}
-						int file_fd = open(file_name, O_WRONLY | O_CREAT);
+						int file_fd = open(file_name, O_WRONLY | O_CREAT, ASCII_MODE);
 						write(file_fd, buff, strlen(buff));
 						close(file_fd);
 					}
@@ -472,6 +472,7 @@ void main(int argc, char **argv)
 					write(STDOUT_FILENO, "\n", 1);
 					write_log(log_fd, send_buff, n, BYTE_RESULT);
 					close(data_fd);
+					continue;
 				}
 				else
 				{
