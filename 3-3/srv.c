@@ -31,7 +31,7 @@
 #define TMP_SIZE 1024
 #define MAX_BUF 4096
 
-#define FLAGS (O_RDWR | O_CREAT | O_APPEND)
+#define FLAGS (O_RDWR | O_CREAT | O_TRUNC)
 #define BIN_MODE (S_IXUSR | S_IXGRP | S_IXOTH)
 #define ASCII_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
@@ -48,6 +48,7 @@ char	*g_ip;
 int		g_port;
 char	g_user[256] = "None";
 char	g_mode = 'b';
+time_t	g_time;
 int		log_fd;
 
 void	sh_int(int sig);
@@ -79,7 +80,7 @@ void main(int argc, char **argv)
 	FILE *fp_checkIP, *fp_motd;
 
 	signal(SIGINT, sh_int);
-	log_fd = open("logfile", FLAGS, ASCII_MODE);
+	log_fd = open("logfile", (O_RDWR | O_CREAT | O_APPEND), ASCII_MODE);
 	write_log(log_fd, NULL, 0, START);
     ///// check the number of arguments /////
     if (argc != 2)
@@ -185,8 +186,11 @@ void main(int argc, char **argv)
 				}
 				time_t t = time(NULL);
 				char tmp[256];
-				strftime(tmp, 256, "%a %b %d %X %% %Z", localtime(&t));
+				strftime(tmp, 256, "%a %b %d %X %Z %Y", localtime(&t));
 				sprintf(send_buff, tmp_buff, tmp);
+				strcpy(tmp_buff, send_buff);
+				strcpy(send_buff, "220 ");
+				strcat(send_buff, tmp_buff);
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				fclose(fp_motd);
@@ -195,7 +199,6 @@ void main(int argc, char **argv)
 			if (log_auth(client_fd) == 0)
 			{
 				close(client_fd);
-				write_log(log_fd, NULL, 0, DISCONNECT);
 				exit(0);
 			}
 
@@ -205,7 +208,6 @@ void main(int argc, char **argv)
 				//////// receive PORT or QUIT ///////////
 				if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 				{
-					perror("read error");
 					write_log(log_fd, NULL, 0, DISCONNECT);
 					exit(0);
 				}
@@ -220,7 +222,6 @@ void main(int argc, char **argv)
 					strcpy(send_buff, "221 Goodbye.\n");
 					if (write(client_fd, send_buff, strlen(send_buff)) < 0)
 					{
-						perror("write error");
 						write_log(log_fd, NULL, 0, DISCONNECT);
 						exit(0);
 					}
@@ -295,7 +296,6 @@ void main(int argc, char **argv)
 
 					if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 					{
-						perror("read error");
 						write_log(log_fd, NULL, 0, DISCONNECT);
 						exit(0);
 					}
@@ -382,7 +382,6 @@ void main(int argc, char **argv)
 				///////// read NLST or LIST or RETR or STOR from client ////////////
 				if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
 				{
-					perror("read error");
 					write_log(log_fd, NULL, 0, DISCONNECT);
 					exit(0);
 				}
@@ -505,24 +504,26 @@ int log_auth(int connfd)
 
     while (1)
     {
-		if (count > 3)
+		if ((n = read(connfd, user, TMP_SIZE)) <= 0)
 		{
-			strcpy(buff, "530 Failed to log-in.\n");
-			write(connfd, buff, strlen(buff));
-			write(STDOUT_FILENO, buff, strlen(buff));
-			strcpy(g_user, user);
 			write_log(log_fd, NULL, 0, ILLEGAL);
 			return 0;
 		}
-
-		if ((n = read(connfd, user, TMP_SIZE)) <= 0)
-			return 0;
 		user[n] = '\0';
 		write(STDOUT_FILENO, user, strlen(user));
 		write(STDOUT_FILENO, "\n", 1);
 
 		if (user_match(user + 5, NULL) < 0)
 		{
+			if (count >= 3)
+			{
+				strcpy(buff, "530 Failed to log-in.\n");
+				write(connfd, buff, strlen(buff));
+				write(STDOUT_FILENO, buff, strlen(buff));
+				strcpy(g_user, user);
+				write_log(log_fd, NULL, 0, ILLEGAL);
+				return 0;
+			}
 			strcpy(buff, "430 Invalid username or password.\n");
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
@@ -544,6 +545,15 @@ int log_auth(int connfd)
 
 		if (user_match(user + 5, passwd + 5) < 0)
 		{
+			if (count >= 3)
+			{
+				strcpy(buff, "530 Failed to log-in.\n");
+				write(connfd, buff, strlen(buff));
+				write(STDOUT_FILENO, buff, strlen(buff));
+				strcpy(g_user, user);
+				write_log(log_fd, NULL, 0, ILLEGAL);
+				return 0;
+			}
 			strcpy(buff, "430 Invalid username or password.\n");
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
@@ -556,6 +566,7 @@ int log_auth(int connfd)
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
 			strcpy(g_user, user + 5);
+			g_time = time(NULL);
 			write_log(log_fd, NULL, 0, AUTH);
 			break;
 		}
@@ -1336,7 +1347,7 @@ void	write_log(int fd, char *command, int bytes, int type)
 			sprintf(buf, "%s [%s:%d] %s %s | %d bytes\n\n", str, g_ip, g_port, g_user, command, bytes);
 			break;
 		case DISCONNECT:
-			sprintf(buf, "%s [%s:%d] %s LOG_OUT\n\n", str, g_ip, g_port, g_user);
+			sprintf(buf, "%s [%s:%d] %s LOG_OUT\n[total service time : %ld sec]\n\n", str, g_ip, g_port, g_user, time(NULL) - g_time);
 			break;
 		case TERM:
 			sprintf(buf, "%s Server is terminated\n\n", str);
