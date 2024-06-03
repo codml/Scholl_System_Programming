@@ -55,9 +55,9 @@ void	sh_int(int sig);
 void	convert_str_to_addr(char *str, struct sockaddr_in *addr);
 int		log_auth(int connfd);
 int		user_match(char *user, char *passwd);
-void	NLST(char *buf, char *print_buf);
+int		NLST(char *buf, char *print_buf);
 void	MtoS(struct stat *infor, const char *pathname, char *print_buf);
-void	LIST(char *buf, char *print_buf);
+int		LIST(char *buf, char *print_buf);
 int		PWD(char *buf, char *print_buf);
 int		CWD(char *buf, char *print_buf);
 int		CDUP(char *buf, char *print_buf);
@@ -66,8 +66,8 @@ int		DELE(char *buf, char *print_buf);
 int		RMD(char *buf, char *print_buf);
 int		RNFR(char *buf, char *name_from);
 int		RNTO(char *buf, char *name_from);
-void	RETR(char *buf, char *print_buf);
-void	STOR(char *buf, char *print_buf);
+int		RETR(char *buf, char *print_buf);
+int		STOR(char *buf, char *print_buf);
 void	write_log(int fd, char *command, int bytes, int type);
 
 void main(int argc, char **argv)
@@ -391,7 +391,15 @@ void main(int argc, char **argv)
 				write_log(log_fd, buff, 0, FTP);
 
 				////// send client that server will send FTP result via data connection ///////
-				strcpy(send_buff, "150 Opening data connection for directory list\n");
+				if (!strncmp(buff, "NLST", 4) || !strncmp(buff, "LIST", 4))
+					strcpy(send_buff, "150 Opening data connection for directory list\n");
+				if (!strncmp(buff, "RETR", 4) || !strncmp(buff, "STOR", 4))
+				{
+					if (g_mode == 'b')
+						sprintf(send_buff, "150 Opening binary mode data connection for %s.\n", buff + 5);
+					else
+						sprintf(send_buff, "150 Opening ascii mode data connection for %s.\n", buff + 5);
+				}
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				write_log(log_fd, send_buff, 0, RESULT);
@@ -399,17 +407,22 @@ void main(int argc, char **argv)
 				////// send FTP command result to client //////
 				memset(send_buff, 0, BUF_SIZE);
 				if (!strncmp(buff, "NLST", 4))
-					NLST(buff, send_buff);
+					n = NLST(buff, send_buff);
 				else if (!strncmp(buff, "LIST", 4))
-					LIST(buff, send_buff);
+					n = LIST(buff, send_buff);
 				else if (!strncmp(buff, "RETR", 4))
-					RETR(buff, send_buff);
+					n = RETR(buff, send_buff);
 				else if (!strncmp(buff, "STOR", 4))
-					STOR(buff, send_buff);
-				if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
-					strcpy(send_buff, "550 Failed transmission."); // if failed, send Fail code
+					n = STOR(buff, send_buff);
+				if (n < 0)
+				{
+					write(data_fd, "", 0);
+					strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
+				}
+				else if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
+					strcpy(send_buff, "550 Failed transmission.\n"); // if failed, send Fail code
 				else
-					strcpy(send_buff, "226 Result is sent successfully."); // if succeed, send Success code
+					strcpy(send_buff, "226 Complete transmission."); // if succeed, send Success code
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, "\n", 1);
@@ -437,8 +450,11 @@ void main(int argc, char **argv)
 
 void sh_int(int sig)
 {
-	write_log(log_fd, NULL, 0, TERM);
-	close(log_fd);
+	while (wait(NULL) != -1) // if all of child terminated, parent terminate
+	{
+		write_log(log_fd, NULL, 0, TERM);
+		close(log_fd);
+	}
 	exit(0);
 }
 
@@ -685,12 +701,12 @@ void	MtoS(struct stat *infor, const char *pathname, char *print_buf)
 // ================================================================== //
 // Input: char * ->  ftp command from cli                             //
 //                                                                    //
-// Output: None                                                       //
+// Output: int : 0 -> success, -1 -> fail                             //
 //                                                                    //
 // Purpose: execute NLST command(in cli: ls)                          //
 ////////////////////////////////////////////////////////////////////////
 
-void	NLST(char *buf, char *print_buf)
+int		NLST(char *buf, char *print_buf)
 {
 	char 			c;
 	int				idx;
@@ -699,7 +715,6 @@ void	NLST(char *buf, char *print_buf)
 	int				aflag = 0;
 	int				lflag = 0;
 
-	char			*errorM;
 	char			*tmp;
 
 	DIR				*dp;
@@ -733,18 +748,12 @@ void	NLST(char *buf, char *print_buf)
 			lflag++;
 			break;
 		case '?':
-			errorM = "Error: invalid option\n";
-			strcat(print_buf, errorM);
-			return ;
+			return -1;
 		}
 	}
 	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
-	{
-		errorM = "Error: too many arguments\n";
-		strcat(print_buf, errorM);
-		return ;
-	}
+		return -1;
 
 	memset(pathname, 0, 256);
 
@@ -763,13 +772,23 @@ void	NLST(char *buf, char *print_buf)
 	/////////// if pathname is not a directory or has other problem, dp = NULL //////////
 	if ((dp = opendir(pathname)) == NULL)
 	{
-		///////// if error caused, print error string and exit ////////
-		if (errno == EACCES)
-			errorM = "cannot access";
-		else
-			errorM = strerror(errno);
-		sprintf(print_buf, "Error : %s\n", errorM);
-		return ;
+		////// if pathname is not a directory and command has only -l option, not error //////
+		if (errno == ENOTDIR)
+		{
+			if (lflag)
+			{
+				//////// load file status in struct stat infor ////////
+				if (stat(pathname, &infor) == -1)
+					return -1;
+				////////// print formatted file status string and exit //////////
+				MtoS(&infor, pathname, print_buf);
+			}
+			else
+				strcpy(print_buf, pathname);
+				strcat(print_buf, "\n");
+			return 0;
+		}
+		return -1;
 	}
 
 	////////////// if succeed to open directory stream, read directory entries and store in filename[] ///////////
@@ -824,10 +843,7 @@ void	NLST(char *buf, char *print_buf)
 			strcat(path_buf, "/");
 			strcat(path_buf, filename[i]);
 			if (stat(path_buf, &infor) == -1)
-			{
-				sprintf(print_buf, "Error : %s\n", strerror(errno));
-				return ;
-			}
+				return -1;
 			MtoS(&infor, filename[i], line_buf);
 			if (strlen(line_buf) + strlen(print_buf) < BUF_SIZE)
 				strcat(print_buf, line_buf);
@@ -843,10 +859,7 @@ void	NLST(char *buf, char *print_buf)
 			strcat(path_buf, "/");
 			strcat(path_buf, filename[i]);
 			if (stat(path_buf, &infor) == -1)
-			{
-				sprintf(print_buf, "Error : %s\n", strerror(errno));
-				return ;
-			}
+				return -1;
 			if (S_ISDIR(infor.st_mode)) // if the file is directory, write '/' behind its name
 				strcat(print_buf, "/");
 			strcat(print_buf, "\n");
@@ -865,7 +878,7 @@ void	NLST(char *buf, char *print_buf)
 // Purpose: execute LIST command(in cli: dir == ls -al)               //
 ////////////////////////////////////////////////////////////////////////
 
-void	LIST(char *buf, char *print_buf)
+int		LIST(char *buf, char *print_buf)
 {
 	int				idx;
 	int				len = 0;
@@ -898,21 +911,11 @@ void	LIST(char *buf, char *print_buf)
 
 	///////////// option parsing -> if option exists, error ///////////
 	while (getopt(len, split, "") != -1)
-	{
-		errorM = "Error: invalid option\n";
-		strcat(print_buf, errorM);
-		write(1, print_buf, strlen(print_buf));
-		return ;
-	}
+		return -1;
 
 	//////////// if # of arguments are not zero or one -> error ////////////
 	if (optind != len && optind != len - 1)
-	{
-		errorM = "Error: too many arguments\n";
-		strcat(print_buf, errorM);
-		write(1, print_buf, strlen(print_buf));
-		return ;
-	}
+		return -1;
 
 	memset(pathname, 0, 256);
 
@@ -931,10 +934,17 @@ void	LIST(char *buf, char *print_buf)
 	////////////////////// open directory stream by pathname ////////////////////////////
 	if ((dp = opendir(pathname)) == NULL)
 	{
-		///////// if error caused, print error string and exit ////////
-		sprintf(print_buf, "Error : %s\n", strerror(errno));
-		write(1, print_buf, strlen(print_buf));
-		return ;
+		///// if pathname is not a directory and command has only -l option, not error //////
+		if (errno == ENOTDIR)
+		{
+			//////// load file status in struct stat infor ////////
+			if (stat(pathname, &infor) == -1)
+				return -1;
+			////////// print formatted file status string and exit //////////
+			MtoS(&infor, pathname, print_buf);
+			return 0;
+		}
+		return -1;
 	}
 
 	////////////// if succeed to open directory stream, read directory entries and store in filename[] ///////////
@@ -967,11 +977,7 @@ void	LIST(char *buf, char *print_buf)
 		strcat(path_buf, "/");
 		strcat(path_buf, filename[i]);
 		if (stat(path_buf, &infor) == -1)
-		{
-			sprintf(print_buf, "Error : %s\n", strerror(errno));
-			write(1, print_buf, strlen(print_buf));
-			return ;
-		}
+			return -1;
 		MtoS(&infor, filename[i], line_buf);
 		if (strlen(line_buf) + strlen(print_buf) < BUF_SIZE)
 			strcat(print_buf, line_buf);
@@ -1307,12 +1313,47 @@ int		RNTO(char *buf, char *name_from)
 	return 0;
 }
 
-void	RETR(char *buf, char *print_buf)
+int		RETR(char *buf, char *print_buf)
 {
+	int		from_fd, to_fd;
+	int		len = 0;
 
+	char	*split[256];
+	char	*ptr;
+	char	tmp_buf[MAX_BUF];
+	char	from_buf[BUF_SIZE];
+	struct stat infor;
+
+	///////////// split a command by space && stored in split[] ////////////
+	strcpy(tmp_buf, buf);
+	for (char *ptr = strtok(tmp_buf, " "); ptr; ptr = strtok(NULL, " "))
+	{
+		split[len++] = ptr;
+		if (ptr[0] == '-')
+			return -1;
+	}
+	if (len != 2)
+		return -1;
+	
+	if (g_mode == 'b')
+	{
+		if ((from_fd = open(split[1], O_RDONLY, BIN_MODE)) < 0)
+			return -1;
+		len = read(from_fd, from_buf, BUF_SIZE);
+		close(from_fd);
+	}
+	else
+	{
+		if ((from_fd = open(split[1], O_RDONLY, ASCII_MODE)) < 0)
+			return -1;
+		len = read(from_fd, from_buf, BUF_SIZE - 1);
+		from_buf[len] = '\0';
+		close(from_fd);
+	}
+	
 }
 
-void	STOR(char *buf, char *print_buf)
+int		STOR(char *buf, char *print_buf)
 {
 
 }

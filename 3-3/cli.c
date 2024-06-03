@@ -199,7 +199,7 @@ void main(int argc, char **argv)
 		{
 			///// make random port num(10001 ~ 30000) /////
 			srand(time(NULL));
-			port = 10001 + rand() % 20000;
+			port = 10001 + rand() % 50000;
 
 			memset(&temp, 0, sizeof(temp));
 			temp.sin_family=AF_INET;
@@ -280,12 +280,13 @@ void main(int argc, char **argv)
 				exit(1);
 			}
 			buff[n] = '\0';
+
 			write(STDOUT_FILENO, buff, strlen(buff));
-			write(STDOUT_FILENO, "\n", 1);
 			
 			//////////// if succeed to receive in server, print OK & #bytes ////////////
 			if (!strncmp(buff, "226", 3))
 			{
+				write(STDOUT_FILENO, "\n", 1);
 				sprintf(buff, "OK. %d bytes is received.\n", bytes);
 				write(STDOUT_FILENO, buff, strlen(buff));
 			}
