@@ -29,7 +29,12 @@
 #define BUF_SIZE 4096
 #define TMP_SIZE 1024
 #define MAX_BUF 4096
+#define FLAGS (O_RDWR | O_CREAT | O_TRUNC)
+#define BIN_MODE (S_IXUSR | S_IXGRP | S_IXOTH)
+#define ASCII_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+char	mode = 'b';
 
+void	sh_int(int sig);
 void	convert_str_to_addr(char *str, struct sockaddr_in *addr);
 int		log_auth(int connfd);
 int		user_match(char *user, char *passwd);
@@ -56,11 +61,12 @@ void main(int argc, char **argv)
     int len;
 	FILE *fp_checkIP, *fp_motd;
 
+	signal(SIGINT, sh_int);
     ///// check the number of arguments /////
     if (argc != 2)
     {
         write(2, "One argument is needed: port\n", strlen("one argument is needed: port\n"));
-        exit(1);
+        raise(SIGINT);
     }
 
     ////// make socket for server //////
@@ -76,7 +82,7 @@ void main(int argc, char **argv)
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("bind error");
-        exit(1);
+        raise(SIGINT);
     }
 
     ////// open queue for client connect /////
@@ -89,21 +95,21 @@ void main(int argc, char **argv)
 		if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len)) < 0)
 		{
 			perror("control accept error");
-			exit(1);
+			raise(SIGINT);
 		}
 
 		pid_t pid;
 		if ((pid = fork()) < 0)
         {
             perror("fork error");
-            exit(1);
+            raise(SIGINT);
         }
 
 		if (pid == 0)
 		{
 			close(server_fd);
 			if((fp_checkIP = fopen("access.txt", "r")) == NULL) // open access.txt file and check error
-				exit(1);
+				raise(SIGINT);
 			
 			char buf[MAX_BUF]; // store a line from 'access.txt'
 			char cli_ip[MAX_BUF];
@@ -149,6 +155,7 @@ void main(int argc, char **argv)
 				sprintf(send_buff, tmp_buff, ctime(&t));
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
+				fclose(fp_motd);
 			}
 
 			if (log_auth(client_fd) == 0)
@@ -164,7 +171,7 @@ void main(int argc, char **argv)
 				if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 				{
 					perror("read error");
-					exit(1);
+					raise(SIGINT);
 				}
 				buff[n] = '\0';
 				write(STDOUT_FILENO, buff, strlen(buff));
@@ -177,11 +184,11 @@ void main(int argc, char **argv)
 					if (write(client_fd, send_buff, strlen(send_buff)) < 0)
 					{
 						perror("write error");
-						exit(1);
+						raise(SIGINT);
 					}
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					close(client_fd);
-					exit(0);;
+					raise(SIGINT);
 				}
 				else if (!strncmp(buff, "PWD", 3))
 				{
@@ -243,7 +250,7 @@ void main(int argc, char **argv)
 					if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
 					{
 						perror("read error");
-						exit(1);
+						raise(SIGINT);
 					}
 					buff[n] = '\0';
 					write(STDOUT_FILENO, buff, strlen(buff));
@@ -281,6 +288,19 @@ void main(int argc, char **argv)
 				}
 				else if (!strncmp(buff, "TYPE", 4))
 				{
+					if (buff[5] == 'I')
+					{
+						mode = 'b';
+						strcpy(send_buff, "201 Type set to I.\n");
+						
+					}
+					else if (buff[5] == 'A')
+					{
+						mode = 'a';
+						strcpy(send_buff, "201 Type set to A.\n");
+					}
+					write(client_fd, send_buff, strlen(send_buff));
+					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					continue;
 				}
 
@@ -296,7 +316,7 @@ void main(int argc, char **argv)
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					close(data_fd);
 					close(client_fd);
-					exit(1);
+					raise(SIGINT);
 				}
 
 				////// send the success message to client //////
@@ -308,7 +328,7 @@ void main(int argc, char **argv)
 				if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
 				{
 					perror("read error");
-					exit(1);
+					raise(SIGINT);
 				}
 				buff[n] = '\0';
 				write(STDOUT_FILENO, buff, strlen(buff));
@@ -341,6 +361,22 @@ void main(int argc, char **argv)
 		else
 			close(client_fd);
 	}
+}
+
+////////////////////////////////////////////////////////////////////////
+// sh_int                                                             //
+// ================================================================== //
+// Input: int -> sig                                                  //
+//                                                                    //
+// Output: None                                                       //
+//                                                                    //
+// Purpose: called when SIGINT occured                                //
+////////////////////////////////////////////////////////////////////////
+
+void sh_int(int sig)
+{
+	while (wait(NULL) != -1); // if all of child terminated, parent terminate
+	exit(0);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -413,9 +449,11 @@ int log_auth(int connfd)
 			return 0;
 		}
 
-		if ((n = read(connfd, user, MAX_BUF)) <= 0)
+		if ((n = read(connfd, user, TMP_SIZE)) <= 0)
 			return 0;
 		user[n] = '\0';
+		write(STDOUT_FILENO, user, strlen(user));
+		write(STDOUT_FILENO, "\n", 1);
 
 		if (user_match(user + 5, NULL) < 0)
 		{
@@ -432,9 +470,11 @@ int log_auth(int connfd)
 			write(STDOUT_FILENO, buff, strlen(buff));
 		}
 
-		if ((n = read(connfd, passwd + 5, MAX_BUF)) <= 0)
+		if ((n = read(connfd, passwd, TMP_SIZE)) <= 0)
 			return 0;
 		passwd[n] = '\0'; // read user name and passwd from client
+		write(STDOUT_FILENO, passwd, strlen(passwd));
+		write(STDOUT_FILENO, "\n", 1);
 
 		if (user_match(user + 5, passwd + 5) < 0)
 		{
@@ -476,15 +516,16 @@ int user_match(char *user, char *passwd)
 
 	while ((pw = fgetpwent(fp)) != NULL) // parsing passwd line(ID:passwd:uid:gid:...) and store to struct passwd
 	{
+		if (!strcmp(user, pw->pw_name) && (passwd == NULL))
+		{
+			fclose(fp);
+			return 0;
+		}
+
 		if (!strcmp(user, pw->pw_name) && !strcmp(passwd, pw->pw_passwd)) // correspond with passwd
 		{
 			fclose(fp);
 			return 1; // login success
-		}
-		if (!strcmp(user, pw->pw_name) && passwd == NULL)
-		{
-			fclose(fp);
-			return 0;
 		}
 	}
 	fclose(fp); // close file stream

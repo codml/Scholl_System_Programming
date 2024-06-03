@@ -80,7 +80,7 @@ void main(int argc, char **argv)
     {
 		memset(buff, 0, BUF_SIZE);
 
-        write(STDOUT_FILENO, "> ", 2);
+        write(STDOUT_FILENO, "ftp> ", 5);
 		///// read user command from stdin /////
         if ((n = read(STDIN_FILENO, buff, BUF_SIZE)) < 0)
         {
