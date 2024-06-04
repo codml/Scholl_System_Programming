@@ -1,0 +1,269 @@
+Tue Jun  4 16:06:43 2024 Server is started
+
+Tue Jun  4 16:08:05 2024 [127.0.0.1:59918] taewan LOG_IN
+
+Tue Jun  4 16:19:24 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,142,16
+
+Tue Jun  4 16:19:24 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:19:24 2024 [127.0.0.1:59918] taewan NLST -la
+
+Tue Jun  4 16:19:24 2024 [127.0.0.1:59918] taewan 150 Opening data connection for directory list
+
+Tue Jun  4 16:19:24 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 727 bytes
+
+Tue Jun  4 16:20:06 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,90,9
+
+Tue Jun  4 16:20:06 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:20:06 2024 [127.0.0.1:59918] taewan LIST ..
+
+Tue Jun  4 16:20:06 2024 [127.0.0.1:59918] taewan 150 Opening data connection for directory list
+
+Tue Jun  4 16:20:06 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 988 bytes
+
+Tue Jun  4 16:20:28 2024 [127.0.0.1:59918] taewan PWD
+
+Tue Jun  4 16:20:28 2024 [127.0.0.1:59918] taewan 257 "/home/kw2020202034/system_programming_1/3-3" is current directory.
+
+Tue Jun  4 16:20:37 2024 [127.0.0.1:59918] taewan CWD ~
+
+Tue Jun  4 16:20:37 2024 [127.0.0.1:59918] taewan 250 CWD command succeeds.
+
+Tue Jun  4 16:20:39 2024 [127.0.0.1:59918] taewan PWD
+
+Tue Jun  4 16:20:39 2024 [127.0.0.1:59918] taewan 257 "/home/kw2020202034" is current directory.
+
+Tue Jun  4 16:21:04 2024 [127.0.0.1:59918] taewan CWD system_programming_1/3-3
+
+Tue Jun  4 16:21:04 2024 [127.0.0.1:59918] taewan 250 CWD command succeeds.
+
+Tue Jun  4 16:21:06 2024 [127.0.0.1:59918] taewan PWD
+
+Tue Jun  4 16:21:06 2024 [127.0.0.1:59918] taewan 257 "/home/kw2020202034/system_programming_1/3-3" is current directory.
+
+Tue Jun  4 16:21:07 2024 [127.0.0.1:59918] taewan CDUP
+
+Tue Jun  4 16:21:07 2024 [127.0.0.1:59918] taewan 250 CDUP command succeeds.
+
+Tue Jun  4 16:21:12 2024 [127.0.0.1:59918] taewan PWD
+
+Tue Jun  4 16:21:12 2024 [127.0.0.1:59918] taewan 257 "/home/kw2020202034/system_programming_1" is current directory.
+
+Tue Jun  4 16:21:13 2024 [127.0.0.1:59918] taewan CWD 3-3
+
+Tue Jun  4 16:21:13 2024 [127.0.0.1:59918] taewan 250 CWD command succeeds.
+
+Tue Jun  4 16:21:15 2024 [127.0.0.1:59918] taewan PWD
+
+Tue Jun  4 16:21:15 2024 [127.0.0.1:59918] taewan 257 "/home/kw2020202034/system_programming_1/3-3" is current directory.
+
+Tue Jun  4 16:25:04 2024 [127.0.0.1:59918] taewan MKD temp
+
+Tue Jun  4 16:25:04 2024 [127.0.0.1:59918] taewan 250 MKD command performed successfully.
+
+Tue Jun  4 16:25:05 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,147,14
+
+Tue Jun  4 16:25:05 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:25:05 2024 [127.0.0.1:59918] taewan NLST
+
+Tue Jun  4 16:25:05 2024 [127.0.0.1:59918] taewan 150 Opening data connection for directory list
+
+Tue Jun  4 16:25:05 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 66 bytes
+
+Tue Jun  4 16:25:11 2024 [127.0.0.1:59918] taewan RMD temp
+
+Tue Jun  4 16:25:11 2024 [127.0.0.1:59918] taewan 250 RMD command performed successfully.
+
+Tue Jun  4 16:25:23 2024 [127.0.0.1:59918] taewan RMD not_exist_dir
+
+Tue Jun  4 16:25:23 2024 [127.0.0.1:59918] taewan 550 not_exist_dir: Can't remove directory.
+
+Tue Jun  4 16:25:56 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,223,148
+
+Tue Jun  4 16:25:56 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:25:56 2024 [127.0.0.1:59918] taewan RETR Makefile
+
+Tue Jun  4 16:25:56 2024 [127.0.0.1:59918] taewan 150 Opening binary mode data connection for Makefile.
+
+Tue Jun  4 16:25:56 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 98 bytes
+
+Tue Jun  4 16:27:51 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,54,24
+
+Tue Jun  4 16:27:51 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:27:51 2024 [127.0.0.1:59918] taewan STOR memo_from_window.txt
+
+Tue Jun  4 16:27:51 2024 [127.0.0.1:59918] taewan 150 Opening binary mode data connection for memo_from_window.txt.
+
+Tue Jun  4 16:27:51 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 66 bytes
+
+Tue Jun  4 16:27:59 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,230,38
+
+Tue Jun  4 16:27:59 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:27:59 2024 [127.0.0.1:59918] taewan NLST
+
+Tue Jun  4 16:27:59 2024 [127.0.0.1:59918] taewan 150 Opening data connection for directory list
+
+Tue Jun  4 16:27:59 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 81 bytes
+
+Tue Jun  4 16:29:56 2024 [127.0.0.1:59918] taewan TYPE A
+
+Tue Jun  4 16:29:56 2024 [127.0.0.1:59918] taewan 201 Type set to A.
+
+Tue Jun  4 16:30:12 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,111,253
+
+Tue Jun  4 16:30:12 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:30:12 2024 [127.0.0.1:59918] taewan STOR memo_from_window.txt
+
+Tue Jun  4 16:30:12 2024 [127.0.0.1:59918] taewan 150 Opening ascii mode data connection for memo_from_window.txt.
+
+Tue Jun  4 16:30:12 2024 [127.0.0.1:59918] taewan 550 Failed transmission.
+
+Tue Jun  4 16:30:19 2024 [127.0.0.1:59918] taewan DELE memo_from_window.txt
+
+Tue Jun  4 16:30:19 2024 [127.0.0.1:59918] taewan 250 DELE command performed successfully.
+
+Tue Jun  4 16:30:27 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,217,216
+
+Tue Jun  4 16:30:27 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:30:27 2024 [127.0.0.1:59918] taewan STOR memo_from_window.txt
+
+Tue Jun  4 16:30:27 2024 [127.0.0.1:59918] taewan 150 Opening ascii mode data connection for memo_from_window.txt.
+
+Tue Jun  4 16:30:27 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 66 bytes
+
+Tue Jun  4 16:30:32 2024 [127.0.0.1:59918] taewan PORT 127,0,0,1,52,166
+
+Tue Jun  4 16:30:32 2024 [127.0.0.1:59918] taewan 200 PORT command successful
+
+Tue Jun  4 16:30:32 2024 [127.0.0.1:59918] taewan NLST
+
+Tue Jun  4 16:30:32 2024 [127.0.0.1:59918] taewan 150 Opening data connection for directory list
+
+Tue Jun  4 16:30:32 2024 [127.0.0.1:59918] taewan 226 Complete transmission. | 81 bytes
+
+Tue Jun  4 16:33:19 2024 [127.0.0.1:59918] taewan RNFR memo_from_window.txt
+
+Tue Jun  4 16:33:19 2024 [127.0.0.1:59918] taewan 350 File exists, ready to rename.
+
+Tue Jun  4 16:33:19 2024 [127.0.0.1:59918] taewan RNTO name.
+
+
+Tue Jun  4 16:33:19 2024 [127.0.0.1:59918] taewan 250 RNTO command succeeds.
+
+Tue Jun  4 16:33:35 2024 [127.0.0.1:59918] taewan RNFR not_exist_file
+
+Tue Jun  4 16:33:35 2024 [127.0.0.1:59918] taewan 550 not_exist_file: Can't find such file or directory.
+
+Tue Jun  4 16:34:01 2024 [127.0.0.1:59918] taewan QUIT
+
+Tue Jun  4 16:34:01 2024 [127.0.0.1:59918] taewan 221 Goodbye.
+
+Tue Jun  4 16:34:01 2024 [127.0.0.1:59918] taewan LOG_OUT
+[total service time : 1556 sec]
+
+Tue Jun  4 16:34:22 2024 Server is terminated
+
+Tue Jun  4 16:41:37 2024 Server is started
+
+Tue Jun  4 16:41:54 2024 [127.0.0.1:43654] taewan LOG_IN
+
+Tue Jun  4 16:43:43 2024 [127.0.0.1:43654] taewan RNFR name
+
+Tue Jun  4 16:43:43 2024 [127.0.0.1:43654] taewan 550 name: Can't find such file or directory.
+
+Tue Jun  4 16:44:59 2024 [127.0.0.1:43654] taewan DELE name
+
+Tue Jun  4 16:44:59 2024 [127.0.0.1:43654] taewan 550 name: Can't find such file or directory.
+
+Tue Jun  4 16:45:13 2024 [127.0.0.1:43654] taewan RNFR name.
+
+Tue Jun  4 16:45:13 2024 [127.0.0.1:43654] taewan 550 name.: Can't find such file or directory.
+
+Tue Jun  4 16:45:50 2024 [127.0.0.1:43654] taewan PORT 127,0,0,1,65,107
+
+Tue Jun  4 16:45:50 2024 [127.0.0.1:43654] taewan 200 PORT command successful
+
+Tue Jun  4 16:45:50 2024 [127.0.0.1:43654] taewan STOR memo_from_window.txt
+
+Tue Jun  4 16:45:50 2024 [127.0.0.1:43654] taewan 150 Opening binary mode data connection for memo_from_window.txt.
+
+Tue Jun  4 16:45:51 2024 [127.0.0.1:43654] taewan 226 Complete transmission. | 66 bytes
+
+Tue Jun  4 16:46:00 2024 [127.0.0.1:43654] taewan RNFR memo_from_window.txt
+
+Tue Jun  4 16:46:00 2024 [127.0.0.1:43654] taewan 350 File exists, ready to rename.
+
+Tue Jun  4 16:46:00 2024 [127.0.0.1:43654] taewan RNTO window
+
+Tue Jun  4 16:46:00 2024 [127.0.0.1:43654] taewan 250 RNTO command succeeds.
+
+Tue Jun  4 16:46:18 2024 [127.0.0.1:43654] taewan DELE window
+
+Tue Jun  4 16:46:18 2024 [127.0.0.1:43654] taewan 250 DELE command performed successfully.
+
+Tue Jun  4 16:46:22 2024 [127.0.0.1:43654] taewan TYPE A
+
+Tue Jun  4 16:46:22 2024 [127.0.0.1:43654] taewan 201 Type set to A.
+
+Tue Jun  4 16:46:33 2024 [127.0.0.1:43654] taewan TYPE I
+
+Tue Jun  4 16:46:33 2024 [127.0.0.1:43654] taewan 201 Type set to I.
+
+Tue Jun  4 16:46:42 2024 [127.0.0.1:43654] taewan PORT 127,0,0,1,63,119
+
+Tue Jun  4 16:46:42 2024 [127.0.0.1:43654] taewan 200 PORT command successful
+
+Tue Jun  4 16:46:42 2024 [127.0.0.1:43654] taewan STOR memo_from_window
+
+Tue Jun  4 16:46:42 2024 [127.0.0.1:43654] taewan 150 Opening binary mode data connection for memo_from_window.
+
+Tue Jun  4 16:46:42 2024 [127.0.0.1:43654] taewan 550 Failed transmission.
+
+Tue Jun  4 16:46:50 2024 [127.0.0.1:43654] taewan PORT 127,0,0,1,125,134
+
+Tue Jun  4 16:46:50 2024 [127.0.0.1:43654] taewan 200 PORT command successful
+
+Tue Jun  4 16:46:50 2024 [127.0.0.1:43654] taewan STOR memo_from_window.txt
+
+Tue Jun  4 16:46:50 2024 [127.0.0.1:43654] taewan 150 Opening binary mode data connection for memo_from_window.txt.
+
+Tue Jun  4 16:46:50 2024 [127.0.0.1:43654] taewan 226 Complete transmission. | 66 bytes
+
+Tue Jun  4 16:47:01 2024 [127.0.0.1:43654] taewan RNFR memo_from_window.txt
+
+Tue Jun  4 16:47:01 2024 [127.0.0.1:43654] taewan 350 File exists, ready to rename.
+
+Tue Jun  4 16:47:01 2024 [127.0.0.1:43654] taewan RNTO window
+
+Tue Jun  4 16:47:01 2024 [127.0.0.1:43654] taewan 250 RNTO command succeeds.
+
+Tue Jun  4 16:47:12 2024 [127.0.0.1:43654] taewan TYPE A
+
+Tue Jun  4 16:47:12 2024 [127.0.0.1:43654] taewan 201 Type set to A.
+
+Tue Jun  4 16:47:19 2024 [127.0.0.1:43654] taewan PORT 127,0,0,1,127,234
+
+Tue Jun  4 16:47:19 2024 [127.0.0.1:43654] taewan 200 PORT command successful
+
+Tue Jun  4 16:47:19 2024 [127.0.0.1:43654] taewan RETR window
+
+Tue Jun  4 16:47:19 2024 [127.0.0.1:43654] taewan 150 Opening ascii mode data connection for window.
+
+Tue Jun  4 16:47:19 2024 [127.0.0.1:43654] taewan 226 Complete transmission. | 62 bytes
+
+Tue Jun  4 16:47:34 2024 [127.0.0.1:43654] taewan QUIT
+
+Tue Jun  4 16:47:34 2024 [127.0.0.1:43654] taewan 221 Goodbye.
+
+Tue Jun  4 16:47:34 2024 [127.0.0.1:43654] taewan LOG_OUT
+[total service time : 340 sec]
+
+Tue Jun  4 16:47:35 2024 Server is terminated
+

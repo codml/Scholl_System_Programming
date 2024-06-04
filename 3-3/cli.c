@@ -93,8 +93,10 @@ void main(int argc, char **argv)
 		buff[n - 1] = '\0'; // erase '\n'
 
 		len = 0;
+		char tmp_buff[BUF_SIZE];
+		strcpy(tmp_buff, buff);
 		//////// split user command by white spaces ///////////////
-		for (char *ptr = strtok(buff, " \b\v\f\r\t\n"); ptr; ptr = strtok(NULL, " \b\v\f\r\t\n"))
+		for (char *ptr = strtok(tmp_buff, " \b\v\f\r\t\n"); ptr; ptr = strtok(NULL, " \b\v\f\r\t\n"))
 			split[len++] = ptr;
 		split[len] = NULL;
 
@@ -464,7 +466,11 @@ void log_in(int sockfd)
 		exit(1);
 	}
 	else // receive ACCEPTED
+	{
+		write(STDOUT_FILENO, "Connected to sswlab.kw.ac.kr.\n", strlen("Connected to sswlab.kw.ac.kr.\n"));
 		write(STDOUT_FILENO, buf, strlen(buf));
+	}
+		
 
     while (1) // read ID & passwd from STDIN_FILENO and send to server, then receive OK, FAIL, or DISCONNECTION //
     {
