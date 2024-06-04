@@ -7,6 +7,7 @@
         "stdio.h": "c",
         "pwd.h": "c",
         "grp.h": "c",
-        "stat.h": "c"
+        "stat.h": "c",
+        "signal.h": "c"
     }
 }

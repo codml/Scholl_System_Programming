@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////
 // File Name    :cli.c                                                //
-// Date         :2024/05/29                                           //
+// Date         :2024/06/04                                           //
 // OS           :Ubuntu 20.04.6 LTS 64bits                            //
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
 // ------------------------------------------------------------------ //
-// Title        :System Programming Assignment #3-2: data connection  //
-// Description  :make control & data connection                       //
+// Title        :System Programming Assignment #3-3: log file         //
+// Description  :constrtuct the full FTP client + log file            //
 ////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -25,7 +25,8 @@
 #include <sys/stat.h>
 
 #define BUF_SIZE 4096
-#define MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define FLAGS (O_WRONLY | O_CREAT)
+#define MODE (S_IRUSR | S_IWUSR | S_IXUSR| S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
 void convert_addr_to_str(char *buf, struct sockaddr_in *addr);
 void log_in(int sockfd);
@@ -77,11 +78,11 @@ void main(int argc, char **argv)
 		exit(1);
 	}
 
+	////// check IP, ID, passwd //////
 	log_in(ctrlfd);
     while (1)
     {
 		memset(buff, 0, BUF_SIZE);
-
         write(STDOUT_FILENO, "ftp> ", 5);
 		///// read user command from stdin /////
         if ((n = read(STDIN_FILENO, buff, BUF_SIZE)) < 0)
@@ -97,7 +98,7 @@ void main(int argc, char **argv)
 			split[len++] = ptr;
 		split[len] = NULL;
 
-		/// if read invalid command, repeat read from stdin /// 
+		/// if read invalid command, return to reading section from client /// 
 		if (len == 0)
 			continue;
 		///////// buf initialization //////////
@@ -120,8 +121,10 @@ void main(int argc, char **argv)
 			/////// give old name to RNFR ///////
 			strcat(cmd, split[1]);
 
-			write(ctrlfd, cmd, strlen(cmd));
-			if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+			//// send RNFR to server ////
+			if (write(ctrlfd, cmd, strlen(cmd)) <= 0)
+				exit(0);
+			if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0) // read reply code
 			{
 				perror("read error");
 				exit(1);
@@ -129,34 +132,34 @@ void main(int argc, char **argv)
 			buff[n] = '\0';
 			write(STDOUT_FILENO, buff, strlen(buff));
 
-			if (!strncmp("550", buff, 3))
+			if (!strncmp("550", buff, 3)) // if 550: error
 				continue;
 
 			strcpy(cmd, "RNTO ");
 			/////// give new name to RNTO ///////
 			strcat(cmd, split[2]);
-			write(ctrlfd, cmd, strlen(cmd));
-			if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+			write(ctrlfd, cmd, strlen(cmd)); // send RNTO to server
+			if ((n = read(ctrlfd, buff, BUF_SIZE)) <= 0) // read reply code
 			{
 				perror("read error");
 				exit(1);
 			}
 			buff[n] = '\0';
-			write(STDOUT_FILENO, buff, strlen(buff));
+			write(STDOUT_FILENO, buff, strlen(buff)); // print reply code
 			continue;
 		}
-		else if (!strcmp(split[0], "type") && len == 2)
+		else if (!strcmp(split[0], "type") && len == 2) // convert type ascii or binary to TYPE A or I
 		{
 			if (!strcmp(split[1], "ascii"))
 				strcat(cmd, "TYPE A");
 			else if (!strcmp(split[1], "binary"))
 				strcat(cmd, "TYPE I");
 			else
-				continue;
+				continue; // error
 		}
 		else
 		{
-			if (!cmd[0])
+			if (!cmd[0]) // read wrong command
 				continue;
 			///////option && argument///////
 			for (int i = 1; i < len; i++)
@@ -176,7 +179,7 @@ void main(int argc, char **argv)
 		//// if received quit, don't make data connection and just send FTP command ////
 		if (!strcmp(cmd, "QUIT"))
 		{
-			if (write(ctrlfd, cmd, strlen(cmd)) < 0)
+			if (write(ctrlfd, cmd, strlen(cmd)) <= 0)
 			{
 				perror("write error");
 				exit(1);
@@ -215,7 +218,7 @@ void main(int argc, char **argv)
 
 			/////// make PORT instruction and write to server //////
 			convert_addr_to_str(portcmd, &temp);
-			if (write(ctrlfd, portcmd, strlen(portcmd)) < 0)
+			if (write(ctrlfd, portcmd, strlen(portcmd)) <= 0)
 			{
 				perror("write error");
 				exit(1);
@@ -263,16 +266,17 @@ void main(int argc, char **argv)
 			buff[n] = '\0';
 			write(STDOUT_FILENO, buff, strlen(buff));
 
-			if (!strncmp(cmd, "RETR", 4) || !strncmp(cmd, "STOR", 4))
+			if (!strncmp(cmd, "RETR", 4) || !strncmp(cmd, "STOR", 4)) // for get, put
 			{
-				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0) // read filename or reply code 550
 				{
 					perror("read error");
 					exit(1);
 				}
 				buff[n] = '\0';
 
-				if (!strncmp(buff, "550", 3))
+				///// reply code 550: get-> server don't have the file, put -> server has the file /////
+				if (!strncmp(buff, "550 ", 4))
 				{
 					write(STDOUT_FILENO, buff, strlen(buff));
 					close(dataconfd);
@@ -281,54 +285,58 @@ void main(int argc, char **argv)
 
 				struct stat infor;
 				char file_name[BUF_SIZE];
+
+				////// check client: get-> client must not have the file, put -> client must have the file //////
 				if ((stat(buff, &infor) == -1 && !strncmp(cmd, "RETR", 4))
 						|| (stat(buff, &infor) == 0 && !strncmp(cmd, "STOR", 4)))
 					write(ctrlfd, "OK", 2);
 				else
 					write(ctrlfd, "NO", 2);
 
+				/// store the file name ///
 				strcpy(file_name, buff);
 
+				//// send NO -> receive reply code 550 / send OK -> receive OK ////
 				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
 				{
 					perror("read error");
 					exit(1);
 				}
 				buff[n] = '\0';
-				
-				if (!strncmp(buff, "550", 3))
+				if (!strncmp(buff, "550 ", 4))
 				{
 					write(STDOUT_FILENO, buff, strlen(buff));
 					close(dataconfd);
 					continue;
 				}
 
+				//// RETR-> read the file from server and write the file ////
 				if (!strncmp(cmd, "RETR", 4))
 				{
-					if ((n = read(dataconfd, buff, BUF_SIZE)) < 0)
+					if ((n = read(dataconfd, buff, BUF_SIZE)) < 0) // read file contents via data connection
 					{
 						perror("read error");
 						exit(1);
 					}
-					int file_fd = open(file_name, O_WRONLY | O_CREAT, MODE);
-					write(file_fd, buff, strlen(buff));
+					int file_fd = open(file_name, FLAGS, MODE); // open file binary or ascii mode
+					write(file_fd, buff, strlen(buff)); // write contents to the file
 					close(file_fd);
 				}
 				else
 				{
-					int file_fd = open(file_name, O_RDONLY, MODE);
-					n = read(file_fd, buff, BUF_SIZE);
+					int file_fd = open(file_name, O_RDONLY); // open file for reading
+					n = read(file_fd, buff, BUF_SIZE - 1);
 					buff[n] = '\0';
 					close(file_fd);
 
-					if ((n = write(dataconfd, buff, strlen(buff))) < 0)
+					if ((n = write(dataconfd, buff, strlen(buff))) < 0) // transmit the contents via data connection
 					{
 						perror("write error");
 						exit(1);
 					}
 				}
-				bytes = n;
-				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0)
+				bytes = n; // record the sent / received bytes
+				if ((n = read(ctrlfd, buff, BUF_SIZE)) < 0) // read reply message
 				{
 					perror("read error");
 					exit(1);
@@ -337,12 +345,12 @@ void main(int argc, char **argv)
 
 				write(STDOUT_FILENO, buff, strlen(buff));
 				write(STDOUT_FILENO, "\n", 1);
-				if (!strncmp(cmd, "RETR", 4))
+				if (!strncmp(cmd, "RETR", 4)) // RETR: receive the file from server
 					sprintf(buff, "OK. %d bytes is received.\n", bytes);
-				else
+				else // STOR: send the file to server
 					sprintf(buff, "OK. %d bytes is sent.\n", bytes);
 				write(STDOUT_FILENO, buff, strlen(buff));
-				close(dataconfd);
+				close(dataconfd); // close data connection
 			}
 			else
 			{
@@ -383,7 +391,7 @@ void main(int argc, char **argv)
 		else
 		{
 			//// send FTP command ////
-			if (write(ctrlfd, cmd, strlen(cmd)) < 0)
+			if (write(ctrlfd, cmd, strlen(cmd)) <= 0)
 			{
 				perror("write error");
 				exit(1);
@@ -472,9 +480,9 @@ void log_in(int sockfd)
 			exit(1);
 		buf[n] = '\0';
 		write(STDOUT_FILENO, buf, strlen(buf));
-		if (!strncmp(buf, "430", 3))
+		if (!strncmp(buf, "430", 3)) // ID fail, not yet 3 fails
 			continue;
-		else if (!strncmp(buf, "530", 3))
+		else if (!strncmp(buf, "530", 3)) // 3 fails
 		{
 			close(sockfd);
 			exit(0);
@@ -489,9 +497,9 @@ void log_in(int sockfd)
 			exit(1);
 		buf[n] = '\0';
         write(STDOUT_FILENO, buf, strlen(buf));
-		if (!strncmp(buf, "430", 3))
+		if (!strncmp(buf, "430", 3)) // passwd fail, not yet 3 fails
 			continue;
-		else if (!strncmp(buf, "530", 3))
+		else if (!strncmp(buf, "530", 3)) // 3 fails -> exit
 		{
 			close(sockfd);
 			exit(0);

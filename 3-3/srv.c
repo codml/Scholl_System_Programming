@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////
 // File Name    :srv.c                                                //
-// Date         :2024/05/29                                           //
+// Date         :2024/06/04                                           //
 // OS           :Ubuntu 20.04.6 LTS 64bits                            //
 // Author       :Kim Tae Wan                                          //
 // Student ID   :2020202034                                           //
 // ------------------------------------------------------------------ //
-// Title        :System Programming Assignment #3-2: data connection  //
-// Description  :make control & data connection                       //
+// Title        :System Programming Assignment #3-3: log file         //
+// Description  :construct the full FTP server with log file          //
 ////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -31,9 +31,8 @@
 #define TMP_SIZE 1024
 #define MAX_BUF 4096
 
-#define FLAGS (O_RDWR | O_CREAT | O_TRUNC)
-#define BIN_MODE (S_IXUSR | S_IXGRP | S_IXOTH)
-#define ASCII_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define FLAGS (O_WRONLY | O_CREAT)
+#define MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH)
 
 #define START 0
 #define ILLEGAL 1
@@ -47,7 +46,7 @@
 char	*g_ip;
 int		g_port;
 char	g_user[256] = "None";
-char	g_mode = 'b';
+char	g_mode = 'I';
 time_t	g_time;
 int		log_fd;
 
@@ -66,6 +65,7 @@ int		DELE(char *buf, char *print_buf);
 int		RMD(char *buf, char *print_buf);
 int		RNFR(char *buf, char *name_from);
 int		RNTO(char *buf, char *name_from);
+void	convert_ascii(char *file);
 void	write_log(int fd, char *command, int bytes, int type);
 
 void main(int argc, char **argv)
@@ -78,7 +78,7 @@ void main(int argc, char **argv)
 	FILE *fp_checkIP, *fp_motd;
 
 	signal(SIGINT, sh_int);
-	log_fd = open("logfile", (O_RDWR | O_CREAT | O_APPEND), ASCII_MODE);
+	log_fd = open("logfile", (O_RDWR | O_CREAT | O_APPEND), MODE);
 	write_log(log_fd, NULL, 0, START);
     ///// check the number of arguments /////
     if (argc != 2)
@@ -117,10 +117,10 @@ void main(int argc, char **argv)
 		}
 		
 		g_ip = inet_ntoa(client_addr.sin_addr);
-		g_port = ntohs(client_addr.sin_port);
+		g_port = ntohs(client_addr.sin_port); // for log file
 
 		pid_t pid;
-		if ((pid = fork()) < 0)
+		if ((pid = fork()) < 0) // make chile process
         {
             perror("fork error");
             raise(SIGINT);
@@ -161,7 +161,7 @@ void main(int argc, char **argv)
 				break; // if match with ip in 'access.txt', stop compare
 			}
 			fclose(fp_checkIP); // no longer use
-			if (!ptr) // escape while() because of no matching
+			if (!ptr) // exit because of no matching
 			{
 				strcpy(send_buff, "431 This client can't access. Close the session.\n");
 				write(client_fd, send_buff, strlen(send_buff));
@@ -339,16 +339,10 @@ void main(int argc, char **argv)
 				else if (!strncmp(buff, "TYPE", 4))
 				{
 					if (buff[5] == 'I')
-					{
-						g_mode = 'b';
-						strcpy(send_buff, "201 Type set to I.\n");
-						
-					}
+						g_mode = 'I';
 					else if (buff[5] == 'A')
-					{
-						g_mode = 'a';
-						strcpy(send_buff, "201 Type set to A.\n");
-					}
+						g_mode = 'A';
+					sprintf(send_buff, "201 Type set to %c.\n", g_mode);
 					write(client_fd, send_buff, strlen(send_buff));
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					write_log(log_fd, send_buff, 0, RESULT);
@@ -394,7 +388,7 @@ void main(int argc, char **argv)
 					strcpy(send_buff, "150 Opening data connection for directory list\n");
 				if (!strncmp(buff, "RETR", 4) || !strncmp(buff, "STOR", 4))
 				{
-					if (g_mode == 'b')
+					if (g_mode == 'I')
 						sprintf(send_buff, "150 Opening binary mode data connection for %s.\n", buff + 5);
 					else
 						sprintf(send_buff, "150 Opening ascii mode data connection for %s.\n", buff + 5);
@@ -445,9 +439,12 @@ void main(int argc, char **argv)
 					if (!strcmp(cmd, "RETR"))
 					{
 						int file_fd = open(file_name, O_RDONLY);
-						n = read(file_fd, send_buff, BUF_SIZE);
+						n = read(file_fd, send_buff, BUF_SIZE - 1);
 						send_buff[n] = '\0';
 						close(file_fd);
+
+						if (g_mode == 'A')
+							convert_ascii(send_buff);
 
 						if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
 						{
@@ -462,17 +459,16 @@ void main(int argc, char **argv)
 							perror("read error");
 							exit(1);
 						}
-						int file_fd = open(file_name, O_WRONLY | O_CREAT, ASCII_MODE);
+
+						if (g_mode == 'A')
+							convert_ascii(buff);
+
+						int file_fd;
+						file_fd = open(file_name, FLAGS, MODE);
 						write(file_fd, buff, strlen(buff));
 						close(file_fd);
 					}
 					strcpy(send_buff, "226 Complete transmission.");
-					write(client_fd, send_buff, strlen(send_buff));
-					write(STDOUT_FILENO, send_buff, strlen(send_buff));
-					write(STDOUT_FILENO, "\n", 1);
-					write_log(log_fd, send_buff, n, BYTE_RESULT);
-					close(data_fd);
-					continue;
 				}
 				else
 				{
@@ -494,9 +490,11 @@ void main(int argc, char **argv)
 				}
 				write(client_fd, send_buff, strlen(send_buff));
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
-				write(STDOUT_FILENO, "\n", 1);
 				if (!strncmp(send_buff, "226", 3))
+				{
+					write(STDOUT_FILENO, "\n", 1);
 					write_log(log_fd, send_buff, n, BYTE_RESULT);
+				}
 				else
 					write_log(log_fd, send_buff, 0, RESULT);
 				close(data_fd);
@@ -519,11 +517,15 @@ void main(int argc, char **argv)
 
 void sh_int(int sig)
 {
+	int flag = 0;
+
 	while (wait(NULL) != -1) // if all of child terminated, parent terminate
-	{
+		flag++;
+	if (!flag)
+		write_log(log_fd, NULL, 0, DISCONNECT);
+	else
 		write_log(log_fd, NULL, 0, TERM);
-		close(log_fd);
-	}
+	close(log_fd);
 	exit(0);
 }
 
@@ -1380,6 +1382,22 @@ int		RNTO(char *buf, char *name_from)
 		return -1;
 
 	return 0;
+}
+
+void	convert_ascii(char *file)
+{
+	char	*ptr;
+
+	if (!file || file[0] == '\0')
+		return ;
+	for (ptr = file; *(ptr + 1) != '\0'; ptr++)
+	{
+		if ((*ptr == '\r' && *(ptr + 1) == '\n') || (*ptr == '\n' && *(ptr + 1) == '\r'))
+		{
+			*ptr = '\n';
+			memmove(ptr + 1, ptr + 2, strlen(ptr + 2));
+		}
+	}
 }
 
 void	write_log(int fd, char *command, int bytes, int type)
