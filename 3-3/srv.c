@@ -230,26 +230,26 @@ void main(int argc, char **argv)
 					write_log(log_fd, NULL, 0, DISCONNECT);
 					exit(0);
 				}
-				else if (!strncmp(buff, "PWD", 3))
+				else if (!strncmp(buff, "PWD", 3)) // PWD
 				{
 					memset(tmp_buff, 0, TMP_SIZE);
-					if (PWD(buff, tmp_buff) < 0)
+					if (PWD(buff, tmp_buff) < 0) // execute PWD, if failed, send reply 550
 						sprintf(send_buff, "550 %s: Can't print working directory.\n", tmp_buff);
 					else
 						sprintf(send_buff, "257 \"%s\" is current directory.\n", tmp_buff);
-					write(client_fd, send_buff, strlen(send_buff));
-					write(STDOUT_FILENO, send_buff, strlen(send_buff));
-					write_log(log_fd, send_buff, 0, RESULT);
+					write(client_fd, send_buff, strlen(send_buff)); // send reply code
+					write(STDOUT_FILENO, send_buff, strlen(send_buff)); // print the reply message
+					write_log(log_fd, send_buff, 0, RESULT); // write reply message to log file
 					continue;
 				}
 				else if (!strncmp(buff, "CWD", 3))
 				{
 					memset(tmp_buff, 0, TMP_SIZE);
-					if (CWD(buff, tmp_buff) < 0)
+					if (CWD(buff, tmp_buff) < 0) // execute CWD, if failed, send reply 550
 						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
 					else
 						strcpy(send_buff, "250 CWD command succeeds.\n");
-					write(client_fd, send_buff, strlen(send_buff));
+					write(client_fd, send_buff, strlen(send_buff)); // write, send reply message
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
@@ -257,11 +257,11 @@ void main(int argc, char **argv)
 				else if (!strncmp(buff, "CDUP", 4))
 				{
 					memset(tmp_buff, 0, TMP_SIZE);
-					if (CDUP(buff, tmp_buff) < 0)
+					if (CDUP(buff, tmp_buff) < 0) // execute CDUP
 						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
 					else
 						strcpy(send_buff, "250 CDUP command succeeds.\n");
-					write(client_fd, send_buff, strlen(send_buff));
+					write(client_fd, send_buff, strlen(send_buff)); // write, send reply code
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
@@ -269,18 +269,18 @@ void main(int argc, char **argv)
 				else if (!strncmp(buff, "DELE", 4))
 				{
 					memset(tmp_buff, 0, TMP_SIZE);
-					if (DELE(buff, tmp_buff) < 0)
+					if (DELE(buff, tmp_buff) < 0) // execute DELE
 						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
 					else
 						strcpy(send_buff, "250 DELE command performed successfully.\n");
-					write(client_fd, send_buff, strlen(send_buff));
+					write(client_fd, send_buff, strlen(send_buff)); // write, send reply message
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
 				else if (!strncmp(buff, "RNFR", 4))
 				{
-					if (RNFR(buff, tmp_buff) < 0)
+					if (RNFR(buff, tmp_buff) < 0) // execute RNFR
 					{
 						sprintf(send_buff, "550 %s: Can't find such file or directory.\n", tmp_buff);
 						write(client_fd, send_buff, strlen(send_buff));
@@ -289,11 +289,11 @@ void main(int argc, char **argv)
 						continue;
 					}
 					strcpy(send_buff, "350 File exists, ready to rename.\n");
-					write(client_fd, send_buff, strlen(send_buff));
+					write(client_fd, send_buff, strlen(send_buff)); // success RNFR -> execute RNTO
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					write_log(log_fd, send_buff, 0, RESULT);
 
-					if ((n = read(client_fd, buff, BUF_SIZE)) <= 0)
+					if ((n = read(client_fd, buff, BUF_SIZE)) <= 0) // read RNTO
 					{
 						write_log(log_fd, NULL, 0, DISCONNECT);
 						exit(0);
@@ -307,7 +307,7 @@ void main(int argc, char **argv)
 						sprintf(send_buff, "550 %s: Can't be renamed.\n", tmp_buff);
 					else
 						strcpy(send_buff, "250 RNTO command succeeds.\n");
-					write(client_fd, send_buff, strlen(send_buff));
+					write(client_fd, send_buff, strlen(send_buff)); // success RNTO
 					write(STDOUT_FILENO, send_buff, strlen(send_buff));
 					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
@@ -315,7 +315,7 @@ void main(int argc, char **argv)
 				else if (!strncmp(buff, "MKD", 3))
 				{
 					memset(tmp_buff, 0, TMP_SIZE);
-					if (MKD(buff, tmp_buff) < 0)
+					if (MKD(buff, tmp_buff) < 0) // execute MKD
 						sprintf(send_buff, "550 %s: Can't create directory.\n", tmp_buff);
 					else
 						strcpy(send_buff, "250 MKD command performed successfully.\n");
@@ -327,7 +327,7 @@ void main(int argc, char **argv)
 				else if (!strncmp(buff, "RMD", 3))
 				{
 					memset(tmp_buff, 0, TMP_SIZE);
-					if (RMD(buff, tmp_buff) < 0)
+					if (RMD(buff, tmp_buff) < 0) // execute RMD
 						sprintf(send_buff, "550 %s: Can't remove directory.\n", tmp_buff);
 					else
 						strcpy(send_buff, "250 RMD command performed successfully.\n");
@@ -336,7 +336,7 @@ void main(int argc, char **argv)
 					write_log(log_fd, send_buff, 0, RESULT);
 					continue;
 				}
-				else if (!strncmp(buff, "TYPE", 4))
+				else if (!strncmp(buff, "TYPE", 4)) // TYPE: change file type to binary or ascii
 				{
 					if (buff[5] == 'I')
 						g_mode = 'I';
@@ -397,7 +397,7 @@ void main(int argc, char **argv)
 				write(STDOUT_FILENO, send_buff, strlen(send_buff));
 				write_log(log_fd, send_buff, 0, RESULT);
 
-				if (!strncmp(buff, "RETR", 4) || !strncmp(buff, "STOR", 4))
+				if (!strncmp(buff, "RETR", 4) || !strncmp(buff, "STOR", 4)) // file check && data connection
 				{
 					char file_name[BUF_SIZE];
 					char cmd[5];
@@ -406,6 +406,8 @@ void main(int argc, char **argv)
 					strncpy(cmd, buff, 4);
 					cmd[4] = '\0';
 					strcpy(file_name, buff + 5);
+
+					///// check file exist error for RETR, STOR /////
 					if ((stat(file_name, &infor) == 0 && !strncmp(buff, "RETR", 4))
 						|| (stat(file_name, &infor) == -1 && !strncmp(buff, "STOR", 4)))
 						write(client_fd, file_name, strlen(file_name));
@@ -419,6 +421,7 @@ void main(int argc, char **argv)
 						continue;
 					}
 
+					///// read OK or NO, OK-> client no file exist error /////
 					if ((n = read(client_fd, buff, BUF_SIZE)) < 0)
 					{
 						write_log(log_fd, NULL, 0, DISCONNECT);
@@ -436,35 +439,40 @@ void main(int argc, char **argv)
 					}
 					else
 						write(client_fd, "OK", 2);
+
+					/// RETR-> read srv's file and send to client ////
 					if (!strcmp(cmd, "RETR"))
 					{
 						int file_fd = open(file_name, O_RDONLY);
 						n = read(file_fd, send_buff, BUF_SIZE - 1);
-						send_buff[n] = '\0';
+						send_buff[n] = '\0'; // null-terminated string
 						close(file_fd);
 
-						if (g_mode == 'A')
+						if (g_mode == 'A') // if ascii mode, \r\n, \n\r -> \n
 							convert_ascii(send_buff);
 
+						///// send file via data connection /////
 						if ((n = write(data_fd, send_buff, strlen(send_buff))) < 0)
 						{
 							perror("write error");
 							exit(1);
 						}
 					}
-					else
+					else // STOR: receive file from client //
 					{
+						//// read file via data connection ////
 						if ((n = read(data_fd, buff, BUF_SIZE)) < 0)
 						{
 							perror("read error");
 							exit(1);
 						}
 
+						/// if ascii mode, \r\n, \n\r -> \n ///
 						if (g_mode == 'A')
 							convert_ascii(buff);
 
 						int file_fd;
-						file_fd = open(file_name, FLAGS, MODE);
+						file_fd = open(file_name, FLAGS, MODE); // write file
 						write(file_fd, buff, strlen(buff));
 						close(file_fd);
 					}
@@ -493,7 +501,7 @@ void main(int argc, char **argv)
 				if (!strncmp(send_buff, "226", 3))
 				{
 					write(STDOUT_FILENO, "\n", 1);
-					write_log(log_fd, send_buff, n, BYTE_RESULT);
+					write_log(log_fd, send_buff, n, BYTE_RESULT); // if NLST, LIST, RETR, STOR: write log with bytes
 				}
 				else
 					write_log(log_fd, send_buff, 0, RESULT);
@@ -521,10 +529,10 @@ void sh_int(int sig)
 
 	while (wait(NULL) != -1) // if all of child terminated, parent terminate
 		flag++;
-	if (!flag)
+	if (!flag) // no child -> child process
 		write_log(log_fd, NULL, 0, DISCONNECT);
 	else
-		write_log(log_fd, NULL, 0, TERM);
+		write_log(log_fd, NULL, 0, TERM); // main server terminated
 	close(log_fd);
 	exit(0);
 }
@@ -591,7 +599,7 @@ int log_auth(int connfd)
 
     while (1)
     {
-		if ((n = read(connfd, user, TMP_SIZE)) <= 0)
+		if ((n = read(connfd, user, TMP_SIZE)) <= 0) // read USER command
 		{
 			write_log(log_fd, NULL, 0, ILLEGAL);
 			return 0;
@@ -600,9 +608,9 @@ int log_auth(int connfd)
 		write(STDOUT_FILENO, user, strlen(user));
 		write(STDOUT_FILENO, "\n", 1);
 
-		if (user_match(user + 5, NULL) < 0)
+		if (user_match(user + 5, NULL) < 0) // if USER username not exist in passwd, send reply code 550
 		{
-			if (count >= 3)
+			if (count >= 3) // 3 fail: log_fail
 			{
 				strcpy(buff, "530 Failed to log-in.\n");
 				write(connfd, buff, strlen(buff));
@@ -611,13 +619,13 @@ int log_auth(int connfd)
 				write_log(log_fd, NULL, 0, ILLEGAL);
 				return 0;
 			}
-			strcpy(buff, "430 Invalid username or password.\n");
+			strcpy(buff, "430 Invalid username or password.\n"); // fail one or two
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
 			count++;
 			continue;
 		}
-		else
+		else // user exists
 		{
 			strcpy(buff, "331 Password is required for username.\n");
 			write(connfd, buff, strlen(buff));
@@ -626,13 +634,13 @@ int log_auth(int connfd)
 
 		if ((n = read(connfd, passwd, TMP_SIZE)) <= 0)
 			return 0;
-		passwd[n] = '\0'; // read user name and passwd from client
+		passwd[n] = '\0'; // read passwd from client
 		write(STDOUT_FILENO, passwd, strlen(passwd));
 		write(STDOUT_FILENO, "\n", 1);
 
-		if (user_match(user + 5, passwd + 5) < 0)
+		if (user_match(user + 5, passwd + 5) < 0) // username && passwd not exist in passwd
 		{
-			if (count >= 3)
+			if (count >= 3) // 3 fail
 			{
 				strcpy(buff, "530 Failed to log-in.\n");
 				write(connfd, buff, strlen(buff));
@@ -641,13 +649,13 @@ int log_auth(int connfd)
 				write_log(log_fd, NULL, 0, ILLEGAL);
 				return 0;
 			}
-			strcpy(buff, "430 Invalid username or password.\n");
+			strcpy(buff, "430 Invalid username or password.\n"); // 1 or 2 fail
 			write(connfd, buff, strlen(buff));
 			write(STDOUT_FILENO, buff, strlen(buff));
 			count++;
 			continue;
 		}
-		else
+		else // success login
 		{
 			sprintf(buff, "230 User %s logged in.\n", user + 5);
 			write(connfd, buff, strlen(buff));
@@ -1392,10 +1400,11 @@ void	convert_ascii(char *file)
 		return ;
 	for (ptr = file; *(ptr + 1) != '\0'; ptr++)
 	{
+		//// if find \r\n or \n\r, convert it to \n ////
 		if ((*ptr == '\r' && *(ptr + 1) == '\n') || (*ptr == '\n' && *(ptr + 1) == '\r'))
 		{
 			*ptr = '\n';
-			memmove(ptr + 1, ptr + 2, strlen(ptr + 2));
+			memmove(ptr + 1, ptr + 2, strlen(ptr + 2) + 1);
 		}
 	}
 }
@@ -1408,31 +1417,31 @@ void	write_log(int fd, char *command, int bytes, int type)
 
 	memset(buf, 0, BUF_SIZE);
 	t = time(NULL);
-	strftime(str, TMP_SIZE, "%c", localtime(&t));
+	strftime(str, TMP_SIZE, "%c", localtime(&t)); // current time
 	switch (type)
 	{
-		case START:
+		case START: // server start
 			sprintf(buf, "%s Server is started\n\n", str);
 			break;
-		case ILLEGAL:
+		case ILLEGAL: // wrong ip or wrong username, passwd
 			sprintf(buf, "%s [%s:%d] %s LOG_FAIL\n\n", str, g_ip, g_port, g_user);
 			break;
-		case AUTH:
+		case AUTH: // login success
 			sprintf(buf, "%s [%s:%d] %s LOG_IN\n\n", str, g_ip, g_port, g_user);
 			break;
-		case FTP:
+		case FTP: // FTP command(NLST, LIST, ...)
 			sprintf(buf, "%s [%s:%d] %s %s\n\n", str, g_ip, g_port, g_user, command);
 			break;
-		case RESULT:
+		case RESULT: // reply message(150, 220, 550, ...)
 			sprintf(buf, "%s [%s:%d] %s %s\n", str, g_ip, g_port, g_user, command);
 			break;
-		case BYTE_RESULT:
+		case BYTE_RESULT: // result from NLST, LIST, RETR, STOR including bytes
 			sprintf(buf, "%s [%s:%d] %s %s | %d bytes\n\n", str, g_ip, g_port, g_user, command, bytes);
 			break;
-		case DISCONNECT:
+		case DISCONNECT: // child process for client connect terminated, caculate service time and print
 			sprintf(buf, "%s [%s:%d] %s LOG_OUT\n[total service time : %ld sec]\n\n", str, g_ip, g_port, g_user, time(NULL) - g_time);
 			break;
-		case TERM:
+		case TERM: // ctrl+c
 			sprintf(buf, "%s Server is terminated\n\n", str);
 			break;
 	}
